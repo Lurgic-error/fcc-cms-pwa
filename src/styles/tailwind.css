@@ -1,0 +1,63 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-primary-50: #eff7ff;
+  --color-primary-100: #dbecfe;
+  --color-primary-200: #bedeff;
+  --color-primary-300: #92cafe;
+  --color-primary-400: #5eacfc;
+  --color-primary-500: #398af8;
+  --color-primary-600: #226cee;
+  --color-primary-700: #1b56da;
+  --color-primary-800: #1c46b1;
+  --color-primary-900: #1d3e8b;
+  --color-primary-950: #1b3067;
+
+  --color-secondary-50: #f0f9ff;
+  --color-secondary-100: #e0f3fe;
+  --color-secondary-200: #b9e8fe;
+  --color-secondary-300: #7cd7fd;
+  --color-secondary-400: #36c4fa;
+  --color-secondary-500: #0cadeb;
+  --color-secondary-600: #0097da;
+  --color-secondary-700: #016ea3;
+  --color-secondary-800: #065d86;
+  --color-secondary-900: #0b4d6f;
+  --color-secondary-950: #07314a;
+
+  --color-app-bg: var(--fcc-app-bg);
+  --color-surface: var(--fcc-surface);
+  --color-surface-muted: var(--fcc-surface-muted);
+  --color-surface-elevated: var(--fcc-surface-elevated);
+
+  /* Need to avoid --color-text clash with default text utilities? No, Tailwind v4 allows it: bg-text, text-text */
+  --color-fcc-text: var(--fcc-text);
+  --color-fcc-text-muted: var(--fcc-text-muted);
+  --color-fcc-border: var(--fcc-border);
+
+  --color-danger: #b42318;
+  --color-danger-hover: #d92d20;
+  --color-success: #0f766e;
+  --color-warning: #b45309;
+
+  --font-sans: 'Poppins', 'Segoe UI', sans-serif;
+  --font-serif: 'Poppins', Georgia, serif;
+
+  --radius-xs: var(--fcc-radius-xs);
+  --radius-sm: var(--fcc-radius-sm);
+  --radius-md: var(--fcc-radius-md);
+  --radius-lg: var(--fcc-radius-lg);
+  --radius-xl: var(--fcc-radius-xl);
+  --radius-2xl: var(--fcc-radius-2xl);
+}
+
+/* Configure class-based dark mode for Tailwind v4 */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  html,
+  body,
+  #app {
+    @apply min-h-full;
+  }
+}

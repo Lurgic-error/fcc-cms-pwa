@@ -1,0 +1,98 @@
+{
+  "app": {
+    "title": "FCC CMS PWA",
+    "shortTitle": "FCC CMS",
+    "description": "Jukwaa la kitaasisi la usimamizi wa maudhui ya lugha nyingi",
+    "workspace": "Sehemu ya Uhariri"
+  },
+  "common": {
+    "language": "Lugha",
+    "goBack": "Rudi Nyuma",
+    "goToDashboard": "Nenda Dashibodi"
+  },
+  "navigation": {
+    "empty": "Hakuna viungo vya urambazaji vinavyopatikana kwa kiwango chako cha ruhusa."
+  },
+  "navSections": {
+    "dashboard": "Dashibodi",
+    "governance": "Utawala",
+    "content": "Maudhui",
+    "communication": "Mawasiliano",
+    "assets": "Mali",
+    "users": "Watumiaji na Ruhusa",
+    "system": "Mfumo"
+  },
+  "auth": {
+    "loginTitle": "Ingia",
+    "loginSubtitle": "Fikia mfumo wa uhariri wa FCC kwa akaunti ya taasisi.",
+    "email": "Barua Pepe",
+    "emailPlaceholder": "jina@fcc.go.tz",
+    "password": "Nenosiri",
+    "passwordPlaceholder": "Weka nenosiri lako",
+    "signIn": "Ingia",
+    "forgotPassword": "Umesahau Nenosiri?",
+    "forgotPasswordSubtitle": "Weka barua pepe yako, tutakutumia tokeni ya kurejesha nenosiri.",
+    "forgotPasswordSent": "Maelekezo yametumwa. Angalia barua pepe yako kwa tokeni.",
+    "sendResetToken": "Tuma Tokeni ya Urejeshaji",
+    "continueToReset": "Endelea Kubadili Nenosiri",
+    "backToLogin": "Rudi Kwenye Ukurasa wa Kuingia",
+    "resetPassword": "Weka Upya Nenosiri",
+    "resetPasswordSubtitle": "Weka tokeni ya urejeshaji kisha unda nenosiri jipya salama.",
+    "recoveryToken": "Tokeni ya Urejeshaji",
+    "recoveryTokenPlaceholder": "Tokeni ya tarakimu 6",
+    "newPassword": "Nenosiri Jipya",
+    "confirmPassword": "Thibitisha Nenosiri",
+    "passwordRules": "Tumia angalau herufi 8 zenye alama maalum na mchanganyiko wa herufi/namba.",
+    "resetPasswordAction": "Weka Upya Nenosiri",
+    "resetPasswordSuccess": "Nenosiri limebadilishwa. Unapelekwa kwenye ukurasa wa kuingia...",
+    "logout": "Toka"
+  },
+  "pages": {
+    "auth": {
+      "login": "Ingia",
+      "forgotPassword": "Umesahau Nenosiri",
+      "resetPassword": "Weka Upya Nenosiri"
+    }
+  },
+  "dashboard": {
+    "overviewTitle": "Muhtasari wa Dashibodi",
+    "overviewDescription": "Njia fupi za mtiririko wa kazi na ruhusa zako.",
+    "editor": "Mhariri",
+    "roleUnknown": "Hakuna nafasi",
+    "currentUser": "Mtumiaji wa Sasa",
+    "activeRole": "Nafasi Inayotumika",
+    "permissionCount": "Ruhusa",
+    "quickLinks": "Viungo vya Haraka",
+    "noLinks": "Hakuna viungo vya moduli kwa akaunti hii.",
+    "startNext": "Anza Hatua Zinazofuata",
+    "managePublications": "Simamia Machapisho",
+    "viewVisitors": "Angalia Takwimu za Wageni"
+  },
+  "shell": {
+    "header": {
+      "workspace": "Kituo cha uendeshaji wa uhariri",
+      "navigation": "Badili urambazaji",
+      "searchPlaceholder": "Nenda haraka kwenye sehemu, foleni, au eneo la mfumo...",
+      "searchEmpty": "Hakuna sehemu inayolingana na utafutaji wako.",
+      "quickActions": "Njia za mkato za uendeshaji",
+      "reviewQueues": "Foleni za uhakiki",
+      "visitWebsite": "Tembelea Tovuti",
+      "secureSession": "Kikao salama"
+    },
+    "account": {
+      "roleFallback": "Sehemu ya Uhariri"
+    },
+    "footer": {
+      "internal": "Sehemu ya ndani ya uhariri",
+      "publicSite": "fcc.go.tz"
+    }
+  },
+  "errors": {
+    "unauthorizedTitle": "Ruhusa Haitoshi",
+    "unauthorizedDescription": "Akaunti yako haina ruhusa ya kufungua ukurasa huu.",
+    "notFoundTitle": "Ukurasa Haujapatikana",
+    "notFoundDescription": "Ukurasa uliotafuta haupo au umehamishwa.",
+    "serverErrorTitle": "Hitilafu ya Seva",
+    "serverErrorDescription": "Mfumo haupatikani kwa sasa. Tafadhali jaribu tena baada ya muda."
+  }
+}

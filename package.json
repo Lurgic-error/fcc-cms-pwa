@@ -1,0 +1,63 @@
+{
+  "name": "fcc-cms-pwa",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite --host --strictPort",
+    "build": "vite build",
+    "preview": "vite preview --host --strictPort",
+    "test:unit": "vitest",
+    "prepare": "cypress install",
+    "test:e2e": "start-server-and-test preview http://localhost:4173 'cypress run --e2e'",
+    "test:e2e:dev": "start-server-and-test 'vite dev --host --port 4173 --strictPort' http://localhost:4173 'cypress open --e2e'",
+    "test:e2e:auth-role": "set -a; [ -f ./.env.cypress ] && . ./.env.cypress; set +a; npx start-server-and-test preview http://localhost:4173 'cypress run --e2e --spec cypress/e2e/auth-role-access.cy.js'",
+    "test:e2e:auth-role:full": "sh ./scripts/run-auth-role-e2e.sh",
+    "test:e2e:module-flows": "set -a; [ -f ./.env.cypress ] && . ./.env.cypress; set +a; npx start-server-and-test preview http://localhost:4173 'cypress run --e2e --spec cypress/e2e/module-resource-flows.cy.js'",
+    "test:e2e:module-flows:full": "sh ./scripts/run-module-flows-e2e.sh",
+    "test:e2e:server:full": "npm run test:e2e:auth-role:full && npm run test:e2e:module-flows:full",
+    "lint": "eslint . --fix --cache",
+    "format": "prettier --write --experimental-cli src/"
+  },
+  "dependencies": {
+    "@editorjs/editorjs": "^2.31.1",
+    "@element-plus/icons-vue": "^2.3.1",
+    "@fortawesome/fontawesome-svg-core": "^7.2.0",
+    "@fortawesome/free-regular-svg-icons": "^7.2.0",
+    "@fortawesome/free-solid-svg-icons": "^7.2.0",
+    "@fortawesome/vue-fontawesome": "^3.1.3",
+    "autoprefixer": "^10.4.22",
+    "axios": "^1.13.2",
+    "chart.js": "^4.5.1",
+    "element-plus": "^2.11.2",
+    "pinia": "^3.0.4",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18",
+    "vue": "^3.5.26",
+    "vue-i18n": "^11.2.8",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@tailwindcss/vite": "^4.1.18",
+    "@vitejs/plugin-vue": "^6.0.3",
+    "@vitest/eslint-plugin": "^1.6.5",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/test-utils": "^2.4.6",
+    "cypress": "^15.8.2",
+    "eslint": "^9.39.2",
+    "eslint-plugin-cypress": "^5.2.1",
+    "eslint-plugin-vue": "~10.6.2",
+    "globals": "^17.0.0",
+    "jsdom": "^27.4.0",
+    "prettier": "3.7.4",
+    "start-server-and-test": "^2.1.3",
+    "unplugin-vue-components": "^30.0.0",
+    "vite": "^7.3.1",
+    "vite-plugin-vue-devtools": "^8.0.5",
+    "vitest": "^4.0.16"
+  }
+}

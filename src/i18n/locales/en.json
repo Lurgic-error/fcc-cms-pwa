@@ -1,0 +1,98 @@
+{
+  "app": {
+    "title": "FCC CMS PWA",
+    "shortTitle": "FCC CMS",
+    "description": "Enterprise multilingual content operations platform",
+    "workspace": "Editorial Workspace"
+  },
+  "common": {
+    "language": "Language",
+    "goBack": "Go Back",
+    "goToDashboard": "Go to Dashboard"
+  },
+  "navigation": {
+    "empty": "No navigation links available for your current access level."
+  },
+  "navSections": {
+    "dashboard": "Dashboard",
+    "governance": "Governance",
+    "content": "Content",
+    "communication": "Communication",
+    "assets": "Assets",
+    "users": "Users & Access",
+    "system": "System"
+  },
+  "auth": {
+    "loginTitle": "Sign In",
+    "loginSubtitle": "Access the FCC editorial workspace using your organization account.",
+    "email": "Email",
+    "emailPlaceholder": "name{'@'}fcc.go.tz",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "signIn": "Sign In",
+    "forgotPassword": "Forgot Password?",
+    "forgotPasswordSubtitle": "Enter your email and we will send a recovery token.",
+    "forgotPasswordSent": "Recovery instructions sent. Check your email for the token.",
+    "sendResetToken": "Send Recovery Token",
+    "continueToReset": "Continue To Password Reset",
+    "backToLogin": "Back To Login",
+    "resetPassword": "Reset Password",
+    "resetPasswordSubtitle": "Provide the recovery token and set a new secure password.",
+    "recoveryToken": "Recovery Token",
+    "recoveryTokenPlaceholder": "6-digit token",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm Password",
+    "passwordRules": "Use at least 8 characters with letters/numbers and one special character.",
+    "resetPasswordAction": "Reset Password",
+    "resetPasswordSuccess": "Password updated successfully. Redirecting to login...",
+    "logout": "Logout"
+  },
+  "pages": {
+    "auth": {
+      "login": "Sign In",
+      "forgotPassword": "Forgot Password",
+      "resetPassword": "Reset Password"
+    }
+  },
+  "dashboard": {
+    "overviewTitle": "Dashboard Overview",
+    "overviewDescription": "Quick access to your editorial workflows and permission context.",
+    "editor": "Editor",
+    "roleUnknown": "No role",
+    "currentUser": "Current User",
+    "activeRole": "Active Role",
+    "permissionCount": "Permissions",
+    "quickLinks": "Quick Links",
+    "noLinks": "No module links available for this account.",
+    "startNext": "Start Next Actions",
+    "managePublications": "Manage Publications",
+    "viewVisitors": "View Visitor Analytics"
+  },
+  "shell": {
+    "header": {
+      "workspace": "Editorial operations suite",
+      "navigation": "Toggle navigation",
+      "searchPlaceholder": "Jump to a workspace, queue, or system area...",
+      "searchEmpty": "No matching workspaces found.",
+      "quickActions": "Operational shortcuts",
+      "reviewQueues": "Review queues",
+      "visitWebsite": "Visit Website",
+      "secureSession": "Secure session"
+    },
+    "account": {
+      "roleFallback": "Editorial Workspace"
+    },
+    "footer": {
+      "internal": "Internal editorial workspace",
+      "publicSite": "fcc.go.tz"
+    }
+  },
+  "errors": {
+    "unauthorizedTitle": "Access Restricted",
+    "unauthorizedDescription": "Your account does not have permission to open this page.",
+    "notFoundTitle": "Page Not Found",
+    "notFoundDescription": "The page you requested does not exist or has moved.",
+    "serverErrorTitle": "Server Error",
+    "serverErrorDescription": "The system is temporarily unavailable. Please try again shortly."
+  }
+}
