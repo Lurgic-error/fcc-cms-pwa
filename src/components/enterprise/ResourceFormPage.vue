@@ -1,6 +1,5 @@
 <script setup>
-import EntityCreateForm from '@/components/forms/EntityCreateForm.vue'
-import EntityEditForm from '@/components/forms/EntityEditForm.vue'
+import EntitySchemaForm from '@/components/forms/EntitySchemaForm.vue'
 import { useEntityCrud } from '@/composables/useEntityCrud'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -66,6 +65,7 @@ const formSubtitle = computed(() =>
     ? `Update ${props.config.singular.toLowerCase()} details with reusable schema form`
     : `Create a new ${props.config.singular.toLowerCase()} using reusable schema form`,
 )
+const submitLabel = computed(() => (isEditMode.value ? 'Save Changes' : 'Create'))
 
 async function loadRecordForEdit() {
   if (!isEditMode.value || (!recordId.value && !isSingleton.value)) return
@@ -168,9 +168,8 @@ async function cancel() {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <EntityEditForm
-      v-if="isEditMode"
+  <div class="enterprise-stack">
+    <EntitySchemaForm
       :title="formTitle"
       :subtitle="formSubtitle"
       :schema="schema"
@@ -178,20 +177,7 @@ async function cancel() {
       :model-value="formModel"
       :loading="loading"
       :error="error"
-      @update:model-value="formModel = $event"
-      @submit="submit"
-      @cancel="cancel"
-    />
-
-    <EntityCreateForm
-      v-else
-      :title="formTitle"
-      :subtitle="formSubtitle"
-      :schema="schema"
-      :wizard="config.wizard || false"
-      :model-value="formModel"
-      :loading="loading"
-      :error="error"
+      :submit-label="submitLabel"
       @update:model-value="formModel = $event"
       @submit="submit"
       @cancel="cancel"

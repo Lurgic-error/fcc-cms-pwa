@@ -5,7 +5,7 @@ import AppFileUploadField from '@/components/forms/AppFileUploadField.vue'
 import AppFormRow from '@/components/forms/AppFormRow.vue'
 
 import CommissionWizardImagePreview from './CommissionWizardImagePreview.vue'
-import CommissionWizardSectionCard from './CommissionWizardSectionCard.vue'
+import AppSurfaceSection from '@/components/common/AppSurfaceSection.vue'
 
 const props = defineProps({
   form: { type: Object, required: true },
@@ -55,7 +55,7 @@ defineExpose({ validate })
 <template>
   <el-form ref="formRef" :model="model" label-position="top" scroll-to-error>
     <div class="commission-step-grid">
-      <CommissionWizardSectionCard
+      <AppSurfaceSection class="commission-wizard-section" title-tag="h3"
         title="Director General identity"
         description="Use the legal/public-facing name fields below. The display name is generated automatically."
       >
@@ -109,9 +109,9 @@ defineExpose({ validate })
             <el-input v-model="model.directorGeneral.phoneNumber" placeholder="+255..." />
           </el-form-item>
         </AppFormRow>
-      </CommissionWizardSectionCard>
+      </AppSurfaceSection>
 
-      <CommissionWizardSectionCard
+      <AppSurfaceSection class="commission-wizard-section" title-tag="h3"
         title="Role and profile image"
         description="Maintain the bilingual role title and the lead profile image shown on DG surfaces."
       >
@@ -147,9 +147,9 @@ defineExpose({ validate })
           label="Director General profile preview"
           empty-label="Upload a Director General profile image to preview it here."
         />
-      </CommissionWizardSectionCard>
+      </AppSurfaceSection>
 
-      <CommissionWizardSectionCard
+      <AppSurfaceSection class="commission-wizard-section" title-tag="h3"
         title="Statements"
         description="Keep the Director General profile statement distinct from the commission-level DG featured message."
       >
@@ -158,7 +158,7 @@ defineExpose({ validate })
             label="Profile Statement (English)"
             prop="directorGeneral.statement.en"
             :rules="requiredRule('Enter the English Director General profile statement.')"
-            class="md:col-span-2"
+            class="app-form-row__item--full"
           >
             <el-input
               v-model="model.directorGeneral.statement.en"
@@ -172,7 +172,7 @@ defineExpose({ validate })
             label="Profile Statement (Swahili)"
             prop="directorGeneral.statement.sw"
             :rules="requiredRule('Enter the Swahili Director General profile statement.')"
-            class="md:col-span-2"
+            class="app-form-row__item--full"
           >
             <el-input
               v-model="model.directorGeneral.statement.sw"
@@ -186,7 +186,7 @@ defineExpose({ validate })
             label="Featured DG Message (English)"
             prop="dgStatement.en"
             :rules="requiredRule('Enter the English featured DG message.')"
-            class="md:col-span-2"
+            class="app-form-row__item--full"
           >
             <el-input
               v-model="model.dgStatement.en"
@@ -200,7 +200,7 @@ defineExpose({ validate })
             label="Featured DG Message (Swahili)"
             prop="dgStatement.sw"
             :rules="requiredRule('Enter the Swahili featured DG message.')"
-            class="md:col-span-2"
+            class="app-form-row__item--full"
           >
             <el-input
               v-model="model.dgStatement.sw"
@@ -210,14 +210,14 @@ defineExpose({ validate })
             />
           </el-form-item>
         </AppFormRow>
-      </CommissionWizardSectionCard>
+      </AppSurfaceSection>
 
-      <CommissionWizardSectionCard
+      <AppSurfaceSection class="commission-wizard-section" title-tag="h3"
         title="Biography"
         description="Use this longer bilingual text for the Director General biography page."
       >
         <AppFormRow :columns="2">
-          <el-form-item label="Biography (English)" class="md:col-span-2">
+          <el-form-item label="Biography (English)" class="app-form-row__item--full">
             <el-input
               v-model="model.directorGeneral.biography.en"
               type="textarea"
@@ -226,7 +226,7 @@ defineExpose({ validate })
             />
           </el-form-item>
 
-          <el-form-item label="Biography (Swahili)" class="md:col-span-2">
+          <el-form-item label="Biography (Swahili)" class="app-form-row__item--full">
             <el-input
               v-model="model.directorGeneral.biography.sw"
               type="textarea"
@@ -235,14 +235,7 @@ defineExpose({ validate })
             />
           </el-form-item>
         </AppFormRow>
-      </CommissionWizardSectionCard>
+      </AppSurfaceSection>
     </div>
   </el-form>
 </template>
-
-<style scoped>
-.commission-step-grid {
-  display: grid;
-  gap: 1rem;
-}
-</style>

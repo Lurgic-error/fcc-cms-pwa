@@ -1,9 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue'
 
-import AppFormRow from '@/components/forms/AppFormRow.vue'
+import AppRepeatableListField from '@/components/forms/AppRepeatableListField.vue'
 
-import CommissionWizardSectionCard from './CommissionWizardSectionCard.vue'
+import AppSurfaceSection from '@/components/common/AppSurfaceSection.vue'
 
 const props = defineProps({
   form: { type: Object, required: true },
@@ -12,21 +12,75 @@ const props = defineProps({
 const formRef = ref(null)
 const model = computed(() => props.form)
 
-function requiredRule(message) {
-  return [{ required: true, message, trigger: 'blur' }]
+const philosophiesField = Object.freeze({
+  itemTitle: 'philosophy',
+  addLabel: 'Add Philosophy',
+  itemDescription:
+    'Every philosophy should have a clear title and a supporting bilingual description.',
+  emptyDescription: 'No philosophy entries added yet.',
+  itemSchema: [
+    {
+      key: 'title.en',
+      label: 'Title (English)',
+      required: true,
+      placeholder: 'Write the philosophy title in English.',
+    },
+    {
+      key: 'title.sw',
+      label: 'Title (Swahili)',
+      required: true,
+      placeholder: 'Andika kichwa cha falsafa kwa Kiswahili.',
+    },
+    {
+      key: 'description.en',
+      label: 'Description (English)',
+      component: 'textarea',
+      rows: 4,
+      required: true,
+      placeholder: 'Explain the philosophy in English.',
+    },
+    {
+      key: 'description.sw',
+      label: 'Description (Swahili)',
+      component: 'textarea',
+      rows: 4,
+      required: true,
+      placeholder: 'Elezea falsafa kwa Kiswahili.',
+    },
+  ],
+})
+
+function hasText(value) {
+  return Boolean(String(value || '').trim())
 }
 
-function addPhilosophy() {
-  model.value.philosophies.push({
-    philosophyId: '',
-    title: { en: '', sw: '' },
-    description: { en: '', sw: '' },
-  })
+function hasPhilosophyItems(items = []) {
+  return (
+    Array.isArray(items) &&
+    items.some(
+      (item) =>
+        hasText(item?.title?.en) &&
+        hasText(item?.title?.sw) &&
+        hasText(item?.description?.en) &&
+        hasText(item?.description?.sw),
+    )
+  )
 }
 
-function removePhilosophy(index) {
-  if (model.value.philosophies.length === 1) return
-  model.value.philosophies.splice(index, 1)
+function requiredItemsRule(message, predicate) {
+  return [
+    {
+      validator: (_rule, value, callback) => {
+        if (predicate(value)) {
+          callback()
+          return
+        }
+
+        callback(new Error(message))
+      },
+      trigger: 'change',
+    },
+  ]
 }
 
 async function validate() {
@@ -45,126 +99,22 @@ defineExpose({ validate })
 
 <template>
   <el-form ref="formRef" :model="model" label-position="top" scroll-to-error>
-    <CommissionWizardSectionCard
+    <AppSurfaceSection class="commission-wizard-section" title-tag="h3"
       title="Commission philosophies"
       description="Manage the repeatable philosophy cards that communicate the commission principles."
     >
-      <div class="commission-step-list-header">
-        <div>
-          <h4>Philosophy collection</h4>
-          <p>Every philosophy should have a clear title and a supporting bilingual description.</p>
-        </div>
-        <el-button type="primary" plain @click="addPhilosophy">Add Philosophy</el-button>
-      </div>
-
-      <div class="commission-step-stack">
-        <CommissionWizardSectionCard
-          v-for="(item, index) in model.philosophies"
-          :key="item.philosophyId || `philosophy-${index}`"
-          compact
-        >
-          <template #header>
-            <div class="commission-step-item-header">
-              <div>
-                <h4>Philosophy {{ index + 1 }}</h4>
-                <p>Use a short, principle-led title and an explanatory description.</p>
-              </div>
-              <el-button text type="danger" @click="removePhilosophy(index)">Remove</el-button>
-            </div>
-          </template>
-
-          <AppFormRow :columns="2">
-            <el-form-item
-              :label="`Title ${index + 1} (English)`"
-              :prop="`philosophies.${index}.title.en`"
-              :rules="requiredRule('Enter the English philosophy title.')"
-            >
-              <el-input
-                v-model="item.title.en"
-                placeholder="Write the philosophy title in English."
-              />
-            </el-form-item>
-
-            <el-form-item
-              :label="`Title ${index + 1} (Swahili)`"
-              :prop="`philosophies.${index}.title.sw`"
-              :rules="requiredRule('Enter the Swahili philosophy title.')"
-            >
-              <el-input
-                v-model="item.title.sw"
-                placeholder="Andika kichwa cha falsafa kwa Kiswahili."
-              />
-            </el-form-item>
-
-            <el-form-item
-              :label="`Description ${index + 1} (English)`"
-              :prop="`philosophies.${index}.description.en`"
-              :rules="requiredRule('Enter the English philosophy description.')"
-              class="md:col-span-2"
-            >
-              <el-input
-                v-model="item.description.en"
-                type="textarea"
-                :rows="4"
-                placeholder="Explain the philosophy in English."
-              />
-            </el-form-item>
-
-            <el-form-item
-              :label="`Description ${index + 1} (Swahili)`"
-              :prop="`philosophies.${index}.description.sw`"
-              :rules="requiredRule('Enter the Swahili philosophy description.')"
-              class="md:col-span-2"
-            >
-              <el-input
-                v-model="item.description.sw"
-                type="textarea"
-                :rows="4"
-                placeholder="Elezea falsafa kwa Kiswahili."
-              />
-            </el-form-item>
-          </AppFormRow>
-        </CommissionWizardSectionCard>
-      </div>
-    </CommissionWizardSectionCard>
+      <el-form-item
+        prop="philosophies"
+        :rules="
+          requiredItemsRule(
+            'Add at least one complete philosophy with bilingual title and description.',
+            hasPhilosophyItems,
+          )
+        "
+        class="form-item-flush"
+      >
+        <AppRepeatableListField v-model="model.philosophies" :field="philosophiesField" />
+      </el-form-item>
+    </AppSurfaceSection>
   </el-form>
 </template>
-
-<style scoped>
-.commission-step-stack {
-  display: grid;
-  gap: 1rem;
-}
-
-.commission-step-list-header,
-.commission-step-item-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.commission-step-list-header h4,
-.commission-step-item-header h4 {
-  margin: 0;
-  font-size: 0.94rem;
-  font-weight: 700;
-  color: rgb(15 23 42);
-}
-
-.commission-step-list-header p,
-.commission-step-item-header p {
-  margin: 0.25rem 0 0;
-  font-size: 0.86rem;
-  line-height: 1.55;
-  color: rgb(71 85 105);
-}
-
-@media (max-width: 767px) {
-  .commission-step-list-header,
-  .commission-step-item-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-</style>

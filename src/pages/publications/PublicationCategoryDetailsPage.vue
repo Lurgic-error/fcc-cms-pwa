@@ -2,13 +2,13 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
 import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
 import EntityDetailsPanel from '@/components/enterprise/EntityDetailsPanel.vue'
 import EntityTable from '@/components/tables/EntityTable.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import EntityActionsDropdown from '@/components/workflow/EntityActionsDropdown.vue'
 import { useRouteAccess } from '@/composables/useRouteAccess'
 import { getResourceConfig } from '@/modules/crud/resourceConfigs'
 import { publicationsAPI } from '@/api'
@@ -183,31 +183,17 @@ watch(search, () => {
 <template>
   <PageWrapper>
     <template #header>
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between w-full">
-        <div>
-          <h1 class="page-title fcc-page-title">
-            {{ resolveLocalizedLabel(category, 'Publication Category') }}
-          </h1>
-          <p class="page-description fcc-page-subtitle mt-1">
-            Manage the parent category, review workflow state, and inspect every publication that
-            belongs to it.
-          </p>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <el-button plain round @click="goToList">Back</el-button>
-          <EntityActionsDropdown
-            :actions="detailActions"
-            label="Actions"
-            type="primary"
-            :loading="catLoading"
-            @select="onAction"
-          />
-        </div>
-      </div>
+      <EnterprisePageHeader
+        :title="resolveLocalizedLabel(category, 'Publication Category')"
+        description="Manage the parent category, review workflow state, and inspect every publication that belongs to it."
+        :actions="detailActions"
+        :loading="catLoading"
+        @select="onAction"
+        @back="goToList"
+      />
     </template>
 
-    <div class="space-y-6">
+    <div class="enterprise-stack enterprise-stack--spacious">
       <el-alert
         v-if="categoryVisibility.label !== 'Public'"
         :title="categoryVisibility.label"
@@ -230,17 +216,17 @@ watch(search, () => {
               <StatusBadge :value="category?.effectiveStatus || category?.publicationStatus" />
             </AppDetailItem>
             <AppDetailItem label="Linked publications">
-              <span class="font-bold text-[var(--fcc-text)]">{{
+              <span class="detail-item__emphasis">{{
                 Number(category?.publicationCount || 0)
               }}</span>
             </AppDetailItem>
             <AppDetailItem label="Published publications">
-              <span class="font-bold text-[var(--fcc-text)]">{{
+              <span class="detail-item__emphasis">{{
                 Number(category?.publishedPublicationCount || 0)
               }}</span>
             </AppDetailItem>
-            <AppDetailItem colSpan="full">
-              <span class="text-sm italic text-[var(--fcc-text-muted)]">{{
+            <AppDetailItem label="Visibility guidance" colSpan="full">
+              <span class="detail-item__hint">{{
                 categoryVisibility.description
               }}</span>
             </AppDetailItem>
@@ -250,22 +236,22 @@ watch(search, () => {
         <AppDetailCard title="Lifecycle Summary">
           <AppDetailGrid :columns="1">
             <AppDetailItem label="System key">
-              <span class="font-bold text-[var(--fcc-text)]">{{ category?.systemKey || '-' }}</span>
+              <span class="detail-item__emphasis">{{ category?.systemKey || '-' }}</span>
             </AppDetailItem>
             <AppDetailItem label="Validity type">
-              <span class="font-bold text-[var(--fcc-text)]">{{
+              <span class="detail-item__emphasis">{{
                 category?.validityType || '-'
               }}</span>
             </AppDetailItem>
             <AppDetailItem label="Last updated">
-              <span class="font-bold text-[var(--fcc-text)]">{{
+              <span class="detail-item__emphasis">{{
                 formatDisplayDate(
                   category?.lastModifiedAt || category?.updatedAt || category?.createdAt,
                 )
               }}</span>
             </AppDetailItem>
             <AppDetailItem label="Current workflow state">
-              <span class="font-bold text-[var(--fcc-text)]">{{
+              <span class="detail-item__emphasis">{{
                 getStatusLabel(category?.effectiveStatus || category?.publicationStatus)
               }}</span>
             </AppDetailItem>
@@ -282,7 +268,7 @@ watch(search, () => {
         :error="catError"
       />
 
-      <div class="space-y-4">
+      <div class="enterprise-stack">
         <EntityTable
           title="Related Publications"
           description="Every publication linked to this category appears here so editors can manage the relationship directly."
@@ -313,7 +299,7 @@ watch(search, () => {
           :closable="false"
         >
           <template #default>
-            <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="enterprise-callout-row">
               <span
                 >Create the first publication under this category to make the relationship
                 explicit.</span

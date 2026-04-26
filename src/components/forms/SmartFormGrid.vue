@@ -12,57 +12,103 @@ const props = defineProps({
   },
 })
 
-// Chunk fields into balanced rows based on visibility and fullWidth directives
+const visibleFields = computed(() =>
+  (Array.isArray(props.fields) ? props.fields : []).filter(
+    (field) => field && field.hidden !== true && field.visible !== false,
+  ),
+)
+
+const FULL_WIDTH_COMPONENTS = new Set([
+  'section',
+  'textarea',
+  'file-upload',
+  'repeatable-list',
+  'editor',
+  'rich-text',
+  'upload',
+  'image-upload',
+  'document-upload',
+])
+
+function shouldSpanFullWidth(field = {}) {
+  if (!field || typeof field !== 'object') return false
+  if (field.fullWidth) return true
+  if (FULL_WIDTH_COMPONENTS.has(field.component)) return true
+  return field.type === 'textarea' || field.type === 'file'
+}
+
+function splitBalanced(group, maxColumns) {
+  if (!group.length) return []
+
+  const safeMaxColumns = Math.max(1, Math.min(maxColumns, 4))
+  if (group.length <= safeMaxColumns) return [group]
+
+  const rows = []
+  let remaining = [...group]
+
+  while (remaining.length > 0) {
+    if (remaining.length <= safeMaxColumns) {
+      rows.push(remaining)
+      break
+    }
+
+    if (remaining.length % safeMaxColumns === 1) {
+      const rowSize = Math.max(2, safeMaxColumns - 1)
+      rows.push(remaining.slice(0, rowSize))
+      remaining = remaining.slice(rowSize)
+      continue
+    }
+
+    rows.push(remaining.slice(0, safeMaxColumns))
+    remaining = remaining.slice(safeMaxColumns)
+  }
+
+  return rows
+}
+
 const rows = computed(() => {
   const result = []
-  let currentRow = []
+  let currentGroup = []
 
-  for (const field of props.fields) {
-    // Treat sections and explicitly fullWidth items as breaking the current row
-    if (field.component === 'section' || field.fullWidth) {
-      if (currentRow.length > 0) {
-        result.push([...currentRow])
-        currentRow = []
-      }
+  function flushCurrentGroup() {
+    if (!currentGroup.length) return
+    result.push(...splitBalanced(currentGroup, props.columns))
+    currentGroup = []
+  }
+
+  for (const field of visibleFields.value) {
+    if (shouldSpanFullWidth(field)) {
+      flushCurrentGroup()
       result.push([field])
-    } else {
-      currentRow.push(field)
-      if (currentRow.length >= props.columns) {
-        result.push([...currentRow])
-        currentRow = []
-      }
+      continue
     }
+
+    currentGroup.push(field)
   }
 
-  if (currentRow.length > 0) {
-    result.push([...currentRow])
-  }
-
+  flushCurrentGroup()
   return result
 })
 
-function getGridClass(row) {
-  const len = row.length
-  // If only 1 field is in the row, it spans full width
-  if (len === 1) return 'grid-cols-1'
-  // If 2 fields, split 2
-  if (len === 2) return 'grid-cols-1 md:grid-cols-2'
-  // If 3 fields, split 3
-  if (len === 3) return 'grid-cols-1 md:grid-cols-3'
-  // If 4 fields, split 4
-  if (len >= 4) return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+function getRowClasses(row) {
+  const columns = Math.min(Math.max(row.length, 1), 4)
 
-  return 'grid-cols-1 md:grid-cols-2'
+  return {
+    'smart-form-grid__row--1': columns === 1,
+    'smart-form-grid__row--2': columns === 2,
+    'smart-form-grid__row--3': columns === 3,
+    'smart-form-grid__row--4': columns >= 4,
+  }
 }
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="smart-form-grid">
     <div
       v-for="(row, rowIndex) in rows"
       :key="`row-${rowIndex}`"
-      class="grid gap-x-6 gap-y-4"
-      :class="getGridClass(row)"
+      class="smart-form-grid__row"
+      :class="getRowClasses(row)"
     >
       <slot v-for="field in row" :key="field.key || field.label" :field="field" />
     </div>

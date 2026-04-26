@@ -17,7 +17,7 @@ const props = defineProps({
   },
   size: {
     type: String,
-    default: 'default',
+    default: 'large',
   },
   plain: {
     type: Boolean,
@@ -66,7 +66,7 @@ function onCommand(actionKey) {
   >
     <el-button :type="type" :size="size" :plain="plain" :loading="loading">
       {{ label }}
-      <el-icon class="ml-1"><ArrowDown /></el-icon>
+      <el-icon class="entity-actions-dropdown__chevron"><ArrowDown /></el-icon>
     </el-button>
 
     <template #dropdown>
@@ -78,7 +78,9 @@ function onCommand(actionKey) {
           :divided="action.divided"
           :disabled="action.disabled"
         >
-          <span :class="{ 'text-rose-600': action.danger }">{{ action.label }}</span>
+          <span :class="{ 'entity-actions-dropdown__label--danger': action.danger }">
+            {{ action.label }}
+          </span>
         </el-dropdown-item>
       </el-dropdown-menu>
     </template>

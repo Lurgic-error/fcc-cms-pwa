@@ -5,7 +5,7 @@ import AppFileUploadField from '@/components/forms/AppFileUploadField.vue'
 import AppFormRow from '@/components/forms/AppFormRow.vue'
 
 import CommissionWizardImagePreview from './CommissionWizardImagePreview.vue'
-import CommissionWizardSectionCard from './CommissionWizardSectionCard.vue'
+import AppSurfaceSection from '@/components/common/AppSurfaceSection.vue'
 
 const props = defineProps({
   form: { type: Object, required: true },
@@ -42,7 +42,7 @@ defineExpose({ validate })
 
 <template>
   <el-form ref="formRef" :model="model" label-position="top" scroll-to-error>
-    <CommissionWizardSectionCard
+    <AppSurfaceSection class="commission-wizard-section" title-tag="h3"
       title="Organization structure"
       description="Maintain the title, explanatory copy, accessible image alt text, and structure diagram image."
     >
@@ -73,7 +73,7 @@ defineExpose({ validate })
           label="Description (English)"
           prop="organizationStructure.description.en"
           :rules="requiredRule('Enter the organization structure description in English.')"
-          class="md:col-span-2"
+          class="app-form-row__item--full"
         >
           <el-input
             v-model="model.organizationStructure.description.en"
@@ -87,7 +87,7 @@ defineExpose({ validate })
           label="Description (Swahili)"
           prop="organizationStructure.description.sw"
           :rules="requiredRule('Enter the organization structure description in Swahili.')"
-          class="md:col-span-2"
+          class="app-form-row__item--full"
         >
           <el-input
             v-model="model.organizationStructure.description.sw"
@@ -97,14 +97,14 @@ defineExpose({ validate })
           />
         </el-form-item>
 
-        <el-form-item label="Image Alt (English)" class="md:col-span-2">
+        <el-form-item label="Image Alt (English)" class="app-form-row__item--full">
           <el-input
             v-model="model.organizationStructure.imageAlt.en"
             placeholder="Describe the organization chart image in English."
           />
         </el-form-item>
 
-        <el-form-item label="Image Alt (Swahili)" class="md:col-span-2">
+        <el-form-item label="Image Alt (Swahili)" class="app-form-row__item--full">
           <el-input
             v-model="model.organizationStructure.imageAlt.sw"
             placeholder="Elezea picha ya muundo wa taasisi kwa Kiswahili."
@@ -130,6 +130,6 @@ defineExpose({ validate })
         label="Organization structure preview"
         empty-label="Upload the organization structure image to preview the diagram."
       />
-    </CommissionWizardSectionCard>
+    </AppSurfaceSection>
   </el-form>
 </template>

@@ -1,6 +1,9 @@
 <script setup>
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
+import AppSurfaceSection from '@/components/common/AppSurfaceSection.vue'
 import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
 import { commissionAPI } from '@/api'
 import { toLocalizedParts } from '@/modules/crud/structuralContentForms'
 import { computed, onMounted, ref } from 'vue'
@@ -10,6 +13,10 @@ const router = useRouter()
 const loading = ref(false)
 const error = ref('')
 const history = ref(null)
+const headerActions = Object.freeze([
+  { key: 'refreshHistory', label: 'Refresh History' },
+  { key: 'openEditor', label: 'Open Editor' },
+])
 
 async function loadHistory() {
   loading.value = true
@@ -30,51 +37,73 @@ async function loadHistory() {
 const englishHistory = computed(() => toLocalizedParts(history.value).en || '-')
 const swahiliHistory = computed(() => toLocalizedParts(history.value).sw || '-')
 
+async function onHeaderAction(action) {
+  if (action?.key === 'refreshHistory') {
+    await loadHistory()
+    return
+  }
+
+  if (action?.key === 'openEditor') {
+    await router.push({ name: 'commission.edit' })
+  }
+}
+
+async function goBack() {
+  await router.push({ name: 'commission.details' })
+}
+
 onMounted(loadHistory)
 </script>
 
 <template>
-  <PageWrapper
-    title="Commission History"
-    description="Review the bilingual history block currently assigned to the commission singleton."
-  >
-    <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" class="mb-4" />
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Commission History"
+        title="Commission history"
+        description="Review the bilingual history block currently assigned to the commission singleton."
+        :actions="headerActions"
+        :loading="loading"
+        @select="onHeaderAction"
+        @back="goBack"
+      />
+    </template>
 
-    <el-card shadow="never">
-      <template #header>
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <h2 class="text-base font-semibold text-slate-900">History Content</h2>
-            <p class="text-sm text-slate-600">
-              Use the main commission editor to change this content.
-            </p>
-          </div>
-          <div class="flex gap-2">
-            <el-button @click="loadHistory">Refresh</el-button>
-            <el-button type="primary" @click="router.push({ name: 'commission.edit' })"
-              >Open Editor</el-button
-            >
-          </div>
-        </div>
-      </template>
+    <el-alert
+      v-if="error"
+      :title="error"
+      type="error"
+      show-icon
+      :closable="false"
+      class="app-inline-alert"
+    />
 
-      <el-skeleton v-if="loading" :rows="6" animated />
+    <div class="workspace-shell">
+      <WorkspacePanel
+        eyebrow="History content"
+        title="Bilingual commission history"
+        description="Use the main commission editor when this narrative needs to change."
+      >
+        <el-skeleton v-if="loading" :rows="6" animated />
 
-      <AppBentoGrid v-else>
-        <el-card shadow="never" class="border border-slate-200">
-          <template #header>
-            <span class="font-medium text-slate-900">English</span>
-          </template>
-          <p class="whitespace-pre-line text-sm text-slate-700">{{ englishHistory }}</p>
-        </el-card>
+        <AppBentoGrid v-else columns="2">
+          <AppSurfaceSection
+            title="English"
+            description="Current English copy on the public website."
+            title-tag="h3"
+          >
+            <p class="commission-history-copy">{{ englishHistory }}</p>
+          </AppSurfaceSection>
 
-        <el-card shadow="never" class="border border-slate-200">
-          <template #header>
-            <span class="font-medium text-slate-900">Swahili</span>
-          </template>
-          <p class="whitespace-pre-line text-sm text-slate-700">{{ swahiliHistory }}</p>
-        </el-card>
-      </AppBentoGrid>
-    </el-card>
+          <AppSurfaceSection
+            title="Swahili"
+            description="Current Swahili copy on the public website."
+            title-tag="h3"
+          >
+            <p class="commission-history-copy">{{ swahiliHistory }}</p>
+          </AppSurfaceSection>
+        </AppBentoGrid>
+      </WorkspacePanel>
+    </div>
   </PageWrapper>
 </template>

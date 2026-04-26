@@ -10,136 +10,252 @@ const props = defineProps({
   error: { type: String, default: '' },
   submitLabel: { type: String, default: 'Save' },
   cancelLabel: { type: String, default: 'Cancel' },
+  saveLabel: { type: String, default: 'Save Draft' },
   showCancel: { type: Boolean, default: true },
+  showSave: { type: Boolean, default: false },
+  lockFutureSteps: { type: Boolean, default: true },
 })
 
-const emit = defineEmits(['previous', 'next', 'submit', 'cancel', 'jump'])
+const emit = defineEmits(['previous', 'next', 'submit', 'cancel', 'save', 'jump'])
 
 const isFirstStep = computed(() => props.currentStep <= 0)
 const isLastStep = computed(() => props.currentStep >= props.steps.length - 1)
 const currentStepMeta = computed(() => props.steps[props.currentStep] || null)
+const totalSteps = computed(() => props.steps.length)
+
+const hasNestedSteps = computed(() =>
+  props.steps.some((step) => getStepChildren(step).length > 0),
+)
+const usesSideNavigation = computed(() => totalSteps.value > 4 || hasNestedSteps.value)
+const usesTopNavigation = computed(() => totalSteps.value > 1 && !usesSideNavigation.value)
+
+function getStepChildren(step) {
+  if (!step || typeof step !== 'object') return []
+  return [step.children, step.steps, step.substeps].find((value) => Array.isArray(value)) || []
+}
+
+function getStepIndex(step, fallbackIndex) {
+  return Number.isInteger(step?.index) ? step.index : fallbackIndex
+}
+
+function isStepCurrent(step, index) {
+  return Boolean(step?.current) || index === props.currentStep
+}
+
+function isStepComplete(step, index) {
+  return Boolean(step?.complete || step?.completed) || index < props.currentStep
+}
+
+function isStepError(step) {
+  return Boolean(step?.error)
+}
+
+function isStepDisabled(step, index) {
+  if (props.loading) return true
+  if (step?.disabled || step?.locked) return true
+  return props.lockFutureSteps && index > props.currentStep
+}
+
+function stepStatus(step, index) {
+  if (isStepError(step)) return 'error'
+  if (isStepCurrent(step, index)) return 'current'
+  if (isStepComplete(step, index)) return 'complete'
+  return 'upcoming'
+}
+
+function emitJump(step, fallbackIndex) {
+  const targetIndex = getStepIndex(step, fallbackIndex)
+  if (!Number.isInteger(targetIndex) || isStepDisabled(step, targetIndex)) return
+  emit('jump', targetIndex)
+}
+
+function stepNumber(index) {
+  return String(index + 1).padStart(2, '0')
+}
 </script>
 
 <template>
   <section
-    class="border shadow-sm overflow-hidden flex flex-col"
-    style="
-      background-color: var(--fcc-surface);
-      border-color: var(--fcc-border);
-      border-radius: var(--fcc-radius-lg);
-      box-shadow: var(--fcc-shadow-base);
-    "
+    class="wizard-shell"
+    :class="{
+      'wizard-shell--side': usesSideNavigation,
+      'wizard-shell--top': usesTopNavigation,
+    }"
   >
-    <!-- Header -->
-    <header
-      class="px-5 py-5 border-b"
-      style="background-color: var(--fcc-surface-muted); border-color: var(--fcc-border)"
-    >
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ title }}</h2>
-      <p v-if="subtitle" class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ subtitle }}</p>
+    <header class="wizard-shell__header">
+      <div class="wizard-shell__heading">
+        <p v-if="totalSteps" class="wizard-shell__eyebrow">
+          Step {{ currentStep + 1 }} of {{ totalSteps }}
+        </p>
+        <h2 class="wizard-shell__title">{{ title }}</h2>
+        <p v-if="subtitle" class="wizard-shell__subtitle">{{ subtitle }}</p>
+      </div>
 
-      <!-- Custom Stepper -->
-      <div v-if="steps.length > 1" class="mt-6">
-        <nav aria-label="Progress">
-          <ol role="list" class="flex items-center">
-            <li v-for="(step, index) in steps" :key="step.key || index" class="relative flex-1">
-              <div
-                v-if="index < steps.length - 1"
-                class="absolute left-0 top-1/2 -mt-px w-full h-0.5 bg-slate-200 dark:bg-slate-700"
-                aria-hidden="true"
-                :class="{ 'bg-primary-600 dark:bg-primary-500': index < currentStep }"
-              ></div>
+      <div v-if="currentStepMeta || $slots['header-meta']" class="wizard-shell__header-meta">
+        <div v-if="currentStepMeta" class="wizard-shell__step-summary">
+          <span class="wizard-shell__step-caption">Current Step</span>
+          <strong class="wizard-shell__step-title">{{ currentStepMeta.title }}</strong>
+          <span v-if="currentStepMeta.description" class="wizard-shell__step-description">
+            {{ currentStepMeta.description }}
+          </span>
+        </div>
 
-              <button
-                class="relative flex items-center justify-center w-8 h-8 rounded-full border-2 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 bg-white dark:bg-slate-900 transition-colors"
-                :class="[
-                  index < currentStep
-                    ? 'border-primary-600 dark:border-primary-500 bg-primary-600 dark:bg-primary-500'
-                    : '',
-                  index === currentStep ? 'border-primary-600 dark:border-primary-500' : '',
-                  index > currentStep
-                    ? 'border-slate-300 dark:border-slate-600 hover:border-slate-400 dark:hover:border-slate-500'
-                    : '',
-                ]"
-                @click="emit('jump', index)"
-                :disabled="index > currentStep"
-                :aria-current="index === currentStep ? 'step' : undefined"
-              >
-                <!-- Completed Icon -->
-                <svg
-                  v-if="index < currentStep"
-                  class="w-5 h-5 text-white"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    fill-rule="evenodd"
-                    d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z"
-                    clip-rule="evenodd"
-                  />
-                </svg>
-                <!-- Active dot -->
-                <span
-                  v-else-if="index === currentStep"
-                  class="h-2.5 w-2.5 bg-primary-600 dark:bg-primary-500 rounded-full"
-                  aria-hidden="true"
-                ></span>
-                <!-- Inactive dot -->
-                <span
-                  v-else
-                  class="h-2.5 w-2.5 bg-transparent rounded-full"
-                  aria-hidden="true"
-                ></span>
-              </button>
-            </li>
-          </ol>
-        </nav>
+        <slot name="header-meta" :step="currentStepMeta" />
       </div>
     </header>
 
-    <div class="p-5 md:p-7">
-      <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" class="mb-5" />
+    <div
+      class="wizard-shell__body"
+      :class="{
+        'wizard-shell__body--side': usesSideNavigation,
+        'wizard-shell__body--top': usesTopNavigation,
+      }"
+    >
+      <aside v-if="usesSideNavigation" class="wizard-shell__nav wizard-shell__nav--side">
+        <div class="wizard-shell__nav-scroll">
+          <ol class="wizard-step-list wizard-step-list--side">
+            <li
+              v-for="(step, index) in steps"
+              :key="step.key || step.title || index"
+              class="wizard-step-list__item"
+            >
+              <el-button
+                text
+                class="wizard-step wizard-step--side"
+                :class="`is-${stepStatus(step, getStepIndex(step, index))}`"
+                :disabled="isStepDisabled(step, getStepIndex(step, index))"
+                :aria-current="
+                  isStepCurrent(step, getStepIndex(step, index)) ? 'step' : undefined
+                "
+                @click="emitJump(step, index)"
+              >
+                <span class="wizard-step__index">{{ stepNumber(index) }}</span>
+                <span class="wizard-step__copy">
+                  <span class="wizard-step__title">{{ step.title }}</span>
+                  <span v-if="step.description" class="wizard-step__description">
+                    {{ step.description }}
+                  </span>
+                </span>
+              </el-button>
 
-      <!-- Step Meta -->
-      <div v-if="currentStepMeta" class="mb-6">
-        <h3 class="text-base font-medium leading-6 text-slate-900 dark:text-slate-100">
-          <span
-            class="text-primary-600 dark:text-primary-400 mr-2 text-sm uppercase tracking-wider font-semibold"
-            >Step {{ currentStep + 1 }}</span
-          >
-          {{ currentStepMeta.title }}
-        </h3>
-        <p
-          v-if="currentStepMeta.description"
-          class="mt-1 text-sm text-slate-500 dark:text-slate-400"
-        >
-          {{ currentStepMeta.description }}
-        </p>
-      </div>
-
-      <!-- Form Content -->
-      <div class="space-y-6">
-        <slot />
-      </div>
-
-      <!-- Footer Actions -->
-      <div
-        class="mt-8 pt-5 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3"
-      >
-        <div class="flex gap-3">
-          <el-button v-if="showCancel" @click="$emit('cancel')" plain>{{ cancelLabel }}</el-button>
-          <el-button v-if="!isFirstStep" @click="$emit('previous')">Back</el-button>
+              <ol
+                v-if="getStepChildren(step).length"
+                class="wizard-step-list wizard-step-list--nested"
+              >
+                <li
+                  v-for="(childStep, childIndex) in getStepChildren(step)"
+                  :key="childStep.key || childStep.title || `${index}-${childIndex}`"
+                  class="wizard-step-list__item"
+                >
+                  <el-button
+                    text
+                    class="wizard-step wizard-step--nested"
+                    :class="
+                      `is-${stepStatus(childStep, getStepIndex(childStep, getStepIndex(step, index)))}`
+                    "
+                    :disabled="
+                      isStepDisabled(childStep, getStepIndex(childStep, getStepIndex(step, index)))
+                    "
+                    :aria-current="
+                      isStepCurrent(childStep, getStepIndex(childStep, getStepIndex(step, index)))
+                        ? 'step'
+                        : undefined
+                    "
+                    @click="emitJump(childStep, getStepIndex(step, index))"
+                  >
+                    <span class="wizard-step__title">{{ childStep.title }}</span>
+                    <span v-if="childStep.description" class="wizard-step__description">
+                      {{ childStep.description }}
+                    </span>
+                  </el-button>
+                </li>
+              </ol>
+            </li>
+          </ol>
         </div>
+      </aside>
 
-        <el-button v-if="!isLastStep" type="primary" :loading="loading" @click="$emit('next')">
-          Continue to Next Step
+      <div class="wizard-shell__main">
+        <nav v-if="usesTopNavigation" class="wizard-shell__nav wizard-shell__nav--top">
+          <div class="wizard-shell__nav-scroll wizard-shell__nav-scroll--horizontal">
+            <ol
+              class="wizard-step-list wizard-step-list--top"
+              :style="{ '--wizard-top-step-count': totalSteps }"
+            >
+              <li
+                v-for="(step, index) in steps"
+                :key="step.key || step.title || index"
+                class="wizard-step-list__item"
+              >
+                <el-button
+                  text
+                  class="wizard-step wizard-step--top"
+                  :class="`is-${stepStatus(step, getStepIndex(step, index))}`"
+                  :disabled="isStepDisabled(step, getStepIndex(step, index))"
+                  :aria-current="
+                    isStepCurrent(step, getStepIndex(step, index)) ? 'step' : undefined
+                  "
+                  @click="emitJump(step, index)"
+                >
+                  <span class="wizard-step__index">{{ stepNumber(index) }}</span>
+                  <span class="wizard-step__copy">
+                    <span class="wizard-step__title">{{ step.title }}</span>
+                    <span v-if="step.description" class="wizard-step__description">
+                      {{ step.description }}
+                    </span>
+                  </span>
+                </el-button>
+              </li>
+            </ol>
+          </div>
+        </nav>
+
+        <section class="wizard-shell__content">
+          <div class="wizard-shell__content-scroll">
+            <el-alert
+              v-if="error"
+              :title="error"
+              type="error"
+              show-icon
+              :closable="false"
+              class="wizard-shell__alert"
+            />
+
+            <slot />
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <footer class="wizard-shell__footer">
+      <div class="wizard-shell__footer-group">
+        <el-button v-if="showCancel" size="large" plain @click="$emit('cancel')">
+          {{ cancelLabel }}
+        </el-button>
+        <el-button v-if="!isFirstStep" size="large" @click="$emit('previous')">
+          Previous
+        </el-button>
+      </div>
+
+      <div class="wizard-shell__footer-group wizard-shell__footer-group--end">
+        <el-button v-if="showSave" size="large" plain :loading="loading" @click="$emit('save')">
+          {{ saveLabel }}
         </el-button>
 
-        <el-button v-else type="primary" :loading="loading" @click="$emit('submit')">
+        <el-button
+          v-if="!isLastStep"
+          size="large"
+          type="primary"
+          :loading="loading"
+          @click="$emit('next')"
+        >
+          Next
+        </el-button>
+
+        <el-button v-else size="large" type="primary" :loading="loading" @click="$emit('submit')">
           {{ submitLabel }}
         </el-button>
       </div>
-    </div>
+    </footer>
   </section>
 </template>

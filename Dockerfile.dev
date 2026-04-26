@@ -1,0 +1,19 @@
+# ── FCC CMS PWA — Development ───────────────────────────────────
+# Vite dev server with HMR. Source mounted as volume at runtime.
+# ────────────────────────────────────────────────────────────────
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install ALL dependencies (including devDependencies for vite)
+COPY package*.json ./
+RUN npm ci
+
+# Source files are bind-mounted from host — not copied here.
+# Copy only what's needed for initial container start.
+COPY . .
+
+EXPOSE 4174
+
+CMD ["npx", "vite", "--host", "--port", "4174", "--strictPort"]

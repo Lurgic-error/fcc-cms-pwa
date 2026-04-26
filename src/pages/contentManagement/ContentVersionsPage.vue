@@ -1,14 +1,20 @@
 <script setup>
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
-import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
+import AppFormRow from '@/components/forms/AppFormRow.vue'
 import EntityRelationshipSelect from '@/components/forms/EntityRelationshipSelect.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
+import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import EntityWorkflowButtons from '@/components/workflow/EntityWorkflowButtons.vue'
 import { useContentVersionsStore } from '@/stores/useContentVersionsStore'
 import { useContentItemsStore } from '@/stores/useContentItemsStore'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const versionsStore = useContentVersionsStore()
 const contentItemsStore = useContentItemsStore()
 const { entities: versions, loading, error, pagination } = storeToRefs(versionsStore)
@@ -39,6 +45,31 @@ const selected = computed(() =>
   versions.value.find((item) => item.contentVersionId === selectedId.value),
 )
 
+const stats = computed(() => [
+  { key: 'total', label: 'Versions', value: versions.value.length },
+  {
+    key: 'completed',
+    label: 'Completed',
+    value: versions.value.filter((item) => item?.translationStatus === 'completed').length,
+  },
+  {
+    key: 'reviewed',
+    label: 'Reviewed',
+    value: versions.value.filter((item) => item?.translationStatus === 'reviewed').length,
+  },
+  {
+    key: 'published',
+    label: 'Published',
+    value: versions.value.filter((item) => resolveStatus(item) === 'published').length,
+  },
+])
+
+const headerActions = Object.freeze([
+  { key: 'refresh', label: 'Refresh workspace' },
+  { key: 'create', label: 'New version' },
+  { key: 'resetFilters', label: 'Clear filters' },
+])
+
 function resolveContentItemLabel(item = {}) {
   const localizedTitle = item?.metadata?.title
   return (
@@ -53,6 +84,17 @@ function resolveContentItemLabel(item = {}) {
     item?.contentItemId ||
     'Untitled content item'
   )
+}
+
+function resolveStatus(item = {}) {
+  return item?.effectiveStatus || item?.publicationStatus || 'draft'
+}
+
+function resolveTranslationTone(status = '') {
+  if (status === 'completed' || status === 'reviewed') return 'success'
+  if (status === 'in-progress') return 'warning'
+  if (status === 'rejected') return 'danger'
+  return 'info'
 }
 
 function findContentItemId(item = {}) {
@@ -111,9 +153,19 @@ function loadForm(item) {
   form.metadataJson = JSON.stringify(item?.metadata || {}, null, 2)
 }
 
-function clearForm() {
+function clearForm({ preserveFeedback = false } = {}) {
   selectedId.value = ''
+  if (!preserveFeedback) {
+    feedback.value = ''
+  }
   loadForm(null)
+}
+
+async function resetFilters() {
+  filters.contentItemId = ''
+  filters.locale = ''
+  pager.page = 1
+  await refresh()
 }
 
 function selectContentVersion(item) {
@@ -164,7 +216,7 @@ async function save() {
   }
 
   await refresh()
-  clearForm()
+  clearForm({ preserveFeedback: true })
 }
 
 async function runWorkflow(action) {
@@ -186,227 +238,245 @@ async function runWorkflow(action) {
   await refresh()
 }
 
+async function goBack() {
+  await router.push({ name: 'contentManagement.overview' })
+}
+
+async function onHeaderAction(action) {
+  if (action?.key === 'refresh') {
+    await refresh()
+    return
+  }
+
+  if (action?.key === 'create') {
+    clearForm()
+    return
+  }
+
+  if (action?.key === 'resetFilters') {
+    await resetFilters()
+  }
+}
+
 onMounted(refresh)
 </script>
 
 <template>
-  <PageWrapper class="page">
-    <div class="toolbar">
-      <h1>Content Versions</h1>
-      <div class="toolbar-actions">
-        <button class="btn btn-muted" type="button" @click="refresh">Refresh</button>
-        <button class="btn btn-muted" type="button" @click="clearForm">New</button>
-      </div>
-    </div>
-
-    <section class="card">
-      <h2>Filters</h2>
-      <AppFormRow :columns="3" class="mb-4">
-        <label>
-          Content Item
-          <EntityRelationshipSelect
-            v-model="filters.contentItemId"
-            :field="contentItemField"
-            :model="filters"
-          />
-        </label>
-        <label>
-          Locale
-          <select v-model="filters.locale">
-            <option value="">All</option>
-            <option value="en">English</option>
-            <option value="sw">Swahili</option>
-          </select>
-        </label>
-        <button class="btn btn-primary" type="button" @click="refresh">Apply Filters</button>
-      </AppFormRow>
-    </section>
-
-    <AppBentoGrid columns="2">
-      <section class="card">
-        <h2>{{ selectedId ? 'Edit Content Version' : 'Create Content Version' }}</h2>
-        <form class="form" @submit.prevent="save">
-          <label>
-            Content Item
-            <EntityRelationshipSelect
-              v-model="form.contentItemId"
-              :field="contentItemField"
-              :model="form"
-            />
-          </label>
-          <label>
-            Locale
-            <select v-model="form.locale" required>
-              <option value="en">English</option>
-              <option value="sw">Swahili</option>
-            </select>
-          </label>
-          <label>
-            Translation Status
-            <select v-model="form.translationStatus">
-              <option value="missing">missing</option>
-              <option value="in-progress">in-progress</option>
-              <option value="completed">completed</option>
-              <option value="reviewed">reviewed</option>
-              <option value="rejected">rejected</option>
-            </select>
-          </label>
-          <label>Title (JSON) <textarea v-model="form.titleJson" rows="5" /></label>
-          <label>Blocks (JSON Array) <textarea v-model="form.blocksJson" rows="8" /></label>
-          <label>Media (JSON) <textarea v-model="form.mediaJson" rows="6" /></label>
-          <label>Style (JSON) <textarea v-model="form.styleJson" rows="4" /></label>
-          <label>Actions (JSON Array) <textarea v-model="form.actionsJson" rows="5" /></label>
-          <label>Metadata (JSON) <textarea v-model="form.metadataJson" rows="5" /></label>
-          <button class="btn btn-primary" type="submit" :disabled="loading">
-            {{ loading ? 'Saving...' : selectedId ? 'Update Version' : 'Create Version' }}
-          </button>
-          <p v-if="feedback" class="feedback">{{ feedback }}</p>
-          <p v-if="error" class="error">{{ error }}</p>
-        </form>
-      </section>
-
-      <section class="card">
-        <h2>Versions</h2>
-        <p v-if="loading">Loading content versions...</p>
-        <p v-else-if="!versions.length">No versions found.</p>
-        <table v-else class="table">
-          <thead>
-            <tr>
-              <th>Version ID</th>
-              <th>Content Item</th>
-              <th>Locale</th>
-              <th>Version</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in versions"
-              :key="item.contentVersionId"
-              :class="{ selected: item.contentVersionId === selectedId }"
-              @click="selectContentVersion(item)"
-            >
-              <td>{{ item.contentVersionId }}</td>
-              <td>{{ getContentItemLabel(item) }}</td>
-              <td>{{ item.locale }}</td>
-              <td>{{ item.versionNumber }}</td>
-              <td>{{ item.publicationStatus || 'draft' }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <TablePagination
-          v-if="versions.length"
-          :pagination="pagination"
-          :loading="loading"
-          @update:page="setPage"
-          @update:limit="setLimit"
-        />
-      </section>
-    </AppBentoGrid>
-
-    <section class="card">
-      <h2>Workflow Actions</h2>
-      <EntityWorkflowButtons
-        :disabled="!selected"
-        @submit="runWorkflow('submit')"
-        @approve="runWorkflow('approve')"
-        @reject="runWorkflow('reject')"
-        @publish="runWorkflow('publish')"
-        @unpublish="runWorkflow('unpublish')"
-        @archive="runWorkflow('archive')"
-        @restore="runWorkflow('restore')"
-        @restore-archived="runWorkflow('restoreArchived')"
-        @soft-delete="runWorkflow('softDelete')"
-        @delete="runWorkflow('delete')"
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Content Workspace"
+        title="Content Versions"
+        description="Manage localized content payloads and translation lifecycle in a structured editorial workspace."
+        :actions="headerActions"
+        :loading="loading"
+        @select="onHeaderAction"
+        @back="goBack"
       />
-    </section>
+    </template>
+
+    <div class="workspace-shell">
+      <OverviewStatsGrid :stats="stats" />
+
+      <WorkspacePanel eyebrow="Filters" title="Focus the active version list">
+        <el-form label-position="top" class="workspace-form" @submit.prevent="refresh">
+          <AppFormRow :columns="2">
+            <el-form-item label="Content Item" class="form-item-flush">
+              <EntityRelationshipSelect
+                v-model="filters.contentItemId"
+                :field="contentItemField"
+                :model="filters"
+              />
+            </el-form-item>
+            <el-form-item label="Locale" class="form-item-flush">
+              <el-select v-model="filters.locale">
+                <el-option label="All" value="" />
+                <el-option label="English" value="en" />
+                <el-option label="Swahili" value="sw" />
+              </el-select>
+            </el-form-item>
+          </AppFormRow>
+
+          <div class="workspace-form__actions">
+            <el-button size="large" plain @click="resetFilters">Clear filters</el-button>
+            <el-button size="large" type="primary" native-type="submit">Apply filters</el-button>
+          </div>
+        </el-form>
+      </WorkspacePanel>
+
+      <section class="workspace-grid">
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Version editor"
+          :title="selectedId ? 'Update this content version' : 'Create a new content version'"
+        >
+          <el-form label-position="top" class="workspace-form" @submit.prevent="save">
+            <AppFormRow :columns="3">
+              <el-form-item label="Content Item" class="form-item-flush">
+                <EntityRelationshipSelect
+                  v-model="form.contentItemId"
+                  :field="contentItemField"
+                  :model="form"
+                />
+              </el-form-item>
+              <el-form-item label="Locale" required class="form-item-flush">
+                <el-select v-model="form.locale">
+                  <el-option label="English" value="en" />
+                  <el-option label="Swahili" value="sw" />
+                </el-select>
+              </el-form-item>
+              <el-form-item label="Translation Status" class="form-item-flush">
+                <el-select v-model="form.translationStatus">
+                  <el-option label="missing" value="missing" />
+                  <el-option label="in-progress" value="in-progress" />
+                  <el-option label="completed" value="completed" />
+                  <el-option label="reviewed" value="reviewed" />
+                  <el-option label="rejected" value="rejected" />
+                </el-select>
+              </el-form-item>
+            </AppFormRow>
+
+            <el-form-item label="Title (JSON)" class="form-item-flush">
+              <el-input v-model="form.titleJson" type="textarea" :rows="5" />
+            </el-form-item>
+            <el-form-item label="Blocks (JSON Array)" class="form-item-flush">
+              <el-input v-model="form.blocksJson" type="textarea" :rows="8" />
+            </el-form-item>
+            <el-form-item label="Media (JSON)" class="form-item-flush">
+              <el-input v-model="form.mediaJson" type="textarea" :rows="6" />
+            </el-form-item>
+            <el-form-item label="Style (JSON)" class="form-item-flush">
+              <el-input v-model="form.styleJson" type="textarea" :rows="4" />
+            </el-form-item>
+            <el-form-item label="Actions (JSON Array)" class="form-item-flush">
+              <el-input v-model="form.actionsJson" type="textarea" :rows="5" />
+            </el-form-item>
+            <el-form-item label="Metadata (JSON)" class="form-item-flush">
+              <el-input v-model="form.metadataJson" type="textarea" :rows="5" />
+            </el-form-item>
+
+            <div class="workspace-form__actions">
+              <el-button size="large" plain @click="clearForm">Clear</el-button>
+              <el-button size="large" type="primary" native-type="submit" :loading="loading">
+                {{ selectedId ? 'Save version' : 'Create version' }}
+              </el-button>
+            </div>
+
+            <el-alert
+              v-if="feedback"
+              type="success"
+              show-icon
+              :closable="false"
+              :title="feedback"
+            />
+            <el-alert v-if="error" type="error" show-icon :closable="false" :title="error" />
+          </el-form>
+        </WorkspacePanel>
+
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Version library"
+          title="Browse and select content versions"
+        >
+          <template #aside>
+            <StatusBadge v-if="selected" :value="resolveStatus(selected)" />
+          </template>
+          <div class="workspace-table workspace-table--scroll">
+            <el-table
+              :data="versions"
+              row-key="contentVersionId"
+              stripe
+              highlight-current-row
+              :current-row-key="selectedId"
+              v-loading="loading"
+              @row-click="selectContentVersion"
+            >
+              <el-table-column prop="contentVersionId" label="Version ID" min-width="180" />
+              <el-table-column label="Content Item" min-width="220">
+                <template #default="{ row }">
+                  {{ getContentItemLabel(row) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="locale" label="Locale" min-width="100" />
+              <el-table-column prop="versionNumber" label="Version" min-width="100" />
+              <el-table-column label="Translation" min-width="150">
+                <template #default="{ row }">
+                  <el-tag :type="resolveTranslationTone(row.translationStatus)" effect="plain">
+                    {{ row.translationStatus || 'missing' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="Workflow" min-width="140">
+                <template #default="{ row }">
+                  <StatusBadge :value="resolveStatus(row)" />
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <TablePagination
+            v-if="versions.length"
+            :pagination="pagination"
+            :loading="loading"
+            @update:page="setPage"
+            @update:limit="setLimit"
+          />
+        </WorkspacePanel>
+      </section>
+
+      <section class="workspace-grid workspace-grid--bottom">
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Selected version"
+          :title="selected?.contentVersionId || 'Choose a content version from the list'"
+        >
+          <template #aside>
+            <StatusBadge v-if="selected" :value="resolveStatus(selected)" />
+          </template>
+          <div v-if="selected" class="workspace-summary">
+            <div class="workspace-summary__row">
+              <span>Content item</span>
+              <strong>{{ getContentItemLabel(selected) }}</strong>
+            </div>
+            <div class="workspace-summary__row">
+              <span>Locale</span>
+              <strong>{{ selected.locale || '-' }}</strong>
+            </div>
+            <div class="workspace-summary__row">
+              <span>Translation status</span>
+              <strong>{{ selected.translationStatus || 'missing' }}</strong>
+            </div>
+            <div class="workspace-summary__row">
+              <span>Version number</span>
+              <strong>{{ selected.versionNumber || '-' }}</strong>
+            </div>
+          </div>
+
+          <p v-else class="workspace-empty">
+            Select a content version to review the linked content item, locale, and workflow state.
+          </p>
+        </WorkspacePanel>
+
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Workflow"
+          title="Submit, approve, archive, or restore"
+        >
+          <EntityWorkflowButtons
+            :disabled="!selected"
+            @submit="runWorkflow('submit')"
+            @approve="runWorkflow('approve')"
+            @reject="runWorkflow('reject')"
+            @publish="runWorkflow('publish')"
+            @unpublish="runWorkflow('unpublish')"
+            @archive="runWorkflow('archive')"
+            @restore="runWorkflow('restore')"
+            @restore-archived="runWorkflow('restoreArchived')"
+            @soft-delete="runWorkflow('softDelete')"
+            @delete="runWorkflow('delete')"
+          />
+        </WorkspacePanel>
+      </section>
+    </div>
   </PageWrapper>
 </template>
-
-<style scoped>
-.page {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.toolbar,
-.toolbar-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.card {
-  border: 1px solid var(--color-fcc-border);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  background: var(--color-surface);
-}
-
-.form {
-  display: grid;
-  gap: 0.6rem;
-}
-
-label {
-  display: grid;
-  gap: 0.3rem;
-}
-
-input,
-select,
-textarea {
-  border: 1px solid var(--color-secondary-300);
-  border-radius: 0.375rem;
-  padding: 0.45rem 0.55rem;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
-  border: 1px solid var(--color-fcc-border);
-  padding: 0.45rem;
-  text-align: left;
-  font-size: 0.82rem;
-}
-
-.table tbody tr {
-  cursor: pointer;
-}
-
-.table tbody tr.selected {
-  background: var(--color-secondary-50);
-}
-
-.btn {
-  border: 1px solid var(--color-secondary-300);
-  border-radius: 0.375rem;
-  padding: 0.45rem 0.7rem;
-  background: var(--color-surface);
-  cursor: pointer;
-}
-
-.btn-primary {
-  border-color: var(--color-primary-600);
-  background: var(--color-primary-600);
-  color: var(--color-surface);
-}
-
-.btn-muted {
-  background: var(--color-surface-muted);
-}
-
-.feedback {
-  color: var(--color-primary-600);
-}
-
-.error {
-  color: var(--color-danger);
-}
-</style>

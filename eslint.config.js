@@ -33,6 +33,41 @@ export default defineConfig([
     ],
   },
 
+  // Visual-audit and layout E2E tests legitimately need brief settle
+  // delays before screenshots and intentionally chain DOM commands for
+  // readability. The cypress style rules are stylistic guidance, not
+  // correctness — keep as warnings here so CI does not fail on them.
+  {
+    name: 'cypress/visual-audit-style-overrides',
+    files: [
+      'cypress/e2e/action-row-layout.cy.js',
+      'cypress/e2e/list-workspace-visual-audit.cy.js',
+      'cypress/e2e/page-header-visual-audit.cy.js',
+      'cypress/e2e/visual-audit.cy.js',
+    ],
+    rules: {
+      'cypress/no-unnecessary-waiting': 'warn',
+      'cypress/unsafe-to-chain-command': 'warn',
+    },
+  },
+
+  // Allow an underscore-prefix to mark intentionally-unused parameters
+  // (kept for signature parity with other audit helpers).
+  {
+    name: 'cypress/allow-underscore-unused-args',
+    files: ['cypress/**/*.{js,ts,jsx,tsx}'],
+    rules: {
+      'no-unused-vars': [
+        'error',
+        {
+          args: 'after-used',
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
+
   {
     ...pluginVitest.configs.recommended,
     files: ['src/**/__tests__/*'],

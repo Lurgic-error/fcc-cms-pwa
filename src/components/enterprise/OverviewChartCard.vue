@@ -25,36 +25,16 @@ const chartComponent = computed(() => {
 </script>
 
 <template>
-  <section
-    class="overview-chart-card border shadow-sm p-5"
-    style="
-      background-color: var(--fcc-surface);
-      border-color: var(--fcc-border);
-      border-radius: var(--fcc-radius-lg);
-      box-shadow: var(--fcc-shadow-base);
-    "
-  >
-    <header class="mb-4">
-      <h3 class="text-base font-semibold" style="color: var(--fcc-text)">{{ title }}</h3>
-      <p v-if="description" class="mt-1 text-sm" style="color: var(--fcc-text-muted)">
+  <section class="enterprise-chart-card">
+    <header class="enterprise-chart-card__header">
+      <h3 class="enterprise-chart-card__title">{{ title }}</h3>
+      <p v-if="description" class="enterprise-chart-card__description">
         {{ description }}
       </p>
     </header>
 
-    <div class="overview-chart-card__body">
+    <div class="enterprise-chart-card__body">
       <component :is="chartComponent" :data="data" :height="height" :chart-options="chartOptions" />
     </div>
   </section>
 </template>
-
-<style scoped>
-.overview-chart-card {
-  display: grid;
-  grid-template-rows: auto minmax(14rem, 1fr);
-  height: 100%;
-}
-
-.overview-chart-card__body {
-  min-height: 14rem;
-}
-</style>

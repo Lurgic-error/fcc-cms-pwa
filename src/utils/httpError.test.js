@@ -36,4 +36,10 @@ describe('httpError helpers', () => {
       'The selected publication category could not be found. It may have been deleted or is no longer available.',
     )
   })
+
+  it('preserves plain string error payloads from API wrappers', () => {
+    expect(extractErrorMessage({ error: 'No active locales available.' })).toBe(
+      'No active locales available.',
+    )
+  })
 })

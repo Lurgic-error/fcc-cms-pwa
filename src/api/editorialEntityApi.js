@@ -105,6 +105,140 @@ export function buildMultipartPayload(payload = {}) {
   return formData
 }
 
+export function normalizeEditorialCollectionPayload(payload = {}, collectionKey = 'items') {
+  const items = payload?.[collectionKey] || payload?.items || payload?.data || []
+  const pagination = payload?.pagination || {}
+  const limit = Number(payload?.limit || pagination?.limit || 0)
+  const total = Number(payload?.total || pagination?.total || items.length || 0)
+
+  return {
+    ...payload,
+    items,
+    [collectionKey]: items,
+    page: Number(payload?.page || pagination?.page || 1),
+    limit,
+    total,
+    totalPages: Number(
+      payload?.totalPages ||
+        pagination?.totalPages ||
+        (limit > 0 ? Math.max(1, Math.ceil(total / limit)) : 1),
+    ),
+  }
+}
+
+export function buildEditorialMutationRequest(payload = {}, { forceMultipart = false } = {}) {
+  const usesMultipart = forceMultipart || hasBinaryValue(payload)
+
+  return {
+    body: usesMultipart ? buildMultipartPayload(payload) : payload,
+    headers: usesMultipart ? { 'Content-Type': 'multipart/form-data' } : undefined,
+  }
+}
+
+function createRequestRunner({ request, parseError }) {
+  return async function runRequest(method, url, ...args) {
+    try {
+      const { data } = await request[method](url, ...args.filter((value) => value !== undefined))
+      return data
+    } catch (error) {
+      return { error: parseError(error) }
+    }
+  }
+}
+
+export function createEditorialCollectionApi({
+  request,
+  baseUrl,
+  collectionKey = 'items',
+  searchPath = null,
+  extraListEndpoints = {},
+  forceMultipart = false,
+  processScheduledPath = null,
+  parseError = parseEditorialApiError,
+}) {
+  const runRequest = createRequestRunner({ request, parseError })
+  const workflowApi = buildEditorialEntityApi({ request, baseUrl, parseError })
+
+  async function list(query = {}) {
+    const data = await runRequest('get', baseUrl, { params: query })
+    return data?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
+  }
+
+  async function find(id) {
+    return runRequest('get', `${baseUrl}/${id}`)
+  }
+
+  async function listPublished(query = {}) {
+    const data = await runRequest('get', `${baseUrl}/published`, { params: query })
+    return data?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
+  }
+
+  async function listArchived(query = {}) {
+    const data = await runRequest('get', `${baseUrl}/archived`, { params: query })
+    return data?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
+  }
+
+  async function search(query = {}) {
+    if (!searchPath) return { error: 'search is not implemented.' }
+
+    const data = await runRequest('get', `${baseUrl}/${searchPath}`, { params: query })
+    return data?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
+  }
+
+  async function create(payload = {}) {
+    const { body, headers } = buildEditorialMutationRequest(payload, { forceMultipart })
+    return runRequest('post', `${baseUrl}/create`, body, headers ? { headers } : undefined)
+  }
+
+  async function bulkCreate({ items = [] } = {}) {
+    return runRequest('post', `${baseUrl}/bulk/create`, { items })
+  }
+
+  async function update(id, payload = {}) {
+    const { body, headers } = buildEditorialMutationRequest(payload, { forceMultipart })
+    return runRequest('put', `${baseUrl}/${id}/update`, body, headers ? { headers } : undefined)
+  }
+
+  async function bulkUpdate({ items = [] } = {}) {
+    return runRequest('put', `${baseUrl}/bulk/update`, { items })
+  }
+
+  async function remove(id) {
+    return runRequest('delete', `${baseUrl}/${id}/delete`)
+  }
+
+  async function processScheduled() {
+    if (!processScheduledPath) return { error: 'processScheduled is not implemented.' }
+    return runRequest('post', `${baseUrl}/${processScheduledPath}`)
+  }
+
+  const extraLists = Object.fromEntries(
+    Object.entries(extraListEndpoints).map(([name, path]) => [
+      name,
+      async (query = {}) => {
+        const data = await runRequest('get', `${baseUrl}/${path}`, { params: query })
+        return data?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
+      },
+    ]),
+  )
+
+  return Object.freeze({
+    ...workflowApi,
+    list,
+    find,
+    listPublished,
+    listArchived,
+    search,
+    create,
+    bulkCreate,
+    update,
+    bulkUpdate,
+    remove,
+    processScheduled,
+    ...extraLists,
+  })
+}
+
 export function buildEditorialEntityApi({ request, baseUrl, parseError = parseEditorialApiError }) {
   async function listArchived(query = {}) {
     try {

@@ -1,7 +1,24 @@
 <script setup>
-import EntityRelationshipSelect from '@/components/forms/EntityRelationshipSelect.vue'
-import { articlesAPI, eventsAPI, inquiriesAPI, publicationsAPI, schedulerAPI } from '@/api'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+
+import {
+  articlesAPI,
+  eventsAPI,
+  inquiriesAPI,
+  publicationsAPI,
+  schedulerAPI,
+} from '@/api'
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
+import PageWrapper from '@/components/common/PageWrapper.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
+import OverviewFilterBar from '@/components/enterprise/OverviewFilterBar.vue'
+import ScheduleJobsTable from '@/components/enterprise/ScheduleJobsTable.vue'
+import AppFormRow from '@/components/forms/AppFormRow.vue'
+import EntityRelationshipSelect from '@/components/forms/EntityRelationshipSelect.vue'
+import { extractErrorMessage } from '@/utils/httpError'
+
+const router = useRouter()
 
 const loading = ref(false)
 const actionLoadingId = ref('')
@@ -27,8 +44,9 @@ const createForm = reactive({
   timezone: 'Africa/Dar_es_Salaam',
 })
 
+const headerActions = Object.freeze([{ key: 'refreshSchedules', label: 'Refresh schedules' }])
+
 const statusOptions = [
-  { label: 'All Statuses', value: '' },
   { label: 'Active', value: 'active' },
   { label: 'Paused', value: 'paused' },
   { label: 'Cancelled', value: 'cancelled' },
@@ -36,7 +54,6 @@ const statusOptions = [
 ]
 
 const jobOptions = [
-  { label: 'All Job Types', value: '' },
   { label: 'Publish Content', value: 'publishContent' },
   { label: 'Unpublish Content', value: 'unpublishContent' },
 ]
@@ -56,6 +73,35 @@ const actionOptions = [
 
 const totalPages = computed(() => Math.max(1, Math.ceil((total.value || 0) / limit.value)))
 const supportsScheduledSelector = computed(() => createForm.contentType !== 'notices')
+
+const filterFields = computed(() => [
+  {
+    key: 'status',
+    label: 'Status',
+    type: 'select',
+    placeholder: 'Filter by status',
+    options: statusOptions,
+  },
+  {
+    key: 'jobName',
+    label: 'Job Type',
+    type: 'select',
+    placeholder: 'Filter by job type',
+    options: jobOptions,
+  },
+  {
+    key: 'contentType',
+    label: 'Content Type',
+    type: 'select',
+    placeholder: 'Filter by content type',
+    options: contentTypeOptions,
+  },
+  {
+    key: 'contentId',
+    label: 'Content ID',
+    placeholder: 'Filter by content ID',
+  },
+])
 
 function normalizeCollection(response, keys = []) {
   for (const key of keys) {
@@ -128,29 +174,6 @@ const scheduledContentField = {
   loadOptions: loadScheduledContentOptions,
 }
 
-function formatDate(value) {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '-'
-  return date.toLocaleString()
-}
-
-function scheduleTypeLabel(schedule = {}) {
-  const type = schedule?.data?.contentType || '-'
-  const action =
-    schedule?.data?.action || (schedule.jobName === 'unpublishContent' ? 'unpublish' : 'publish')
-  return `${type} / ${action}`
-}
-
-function scheduleStatusType(status = '') {
-  const value = String(status || '').toLowerCase()
-  if (value === 'active') return 'success'
-  if (value === 'paused') return 'warning'
-  if (value === 'cancelled') return 'danger'
-  if (value === 'completed') return 'info'
-  return ''
-}
-
 watch(
   () => createForm.contentType,
   () => {
@@ -177,10 +200,7 @@ async function fetchSchedules({ resetPage = false } = {}) {
   loading.value = false
 
   if (response?.error) {
-    errorMessage.value =
-      response.error?.response?.data?.error ||
-      response.error?.message ||
-      'Failed to load schedules.'
+    errorMessage.value = extractErrorMessage(response.error, 'Failed to load schedules.')
     return
   }
 
@@ -198,8 +218,14 @@ async function createSchedule() {
     errorMessage.value = 'Content target is required.'
     return
   }
+
   if (Number.isNaN(runAtDate.getTime())) {
     errorMessage.value = 'Run time must be a valid date/time.'
+    return
+  }
+
+  if (runAtDate.getTime() <= Date.now()) {
+    errorMessage.value = 'Choose a future date and time.'
     return
   }
 
@@ -219,10 +245,7 @@ async function createSchedule() {
   })
 
   if (response?.error) {
-    errorMessage.value =
-      response.error?.response?.data?.error ||
-      response.error?.message ||
-      'Failed to create schedule.'
+    errorMessage.value = extractErrorMessage(response.error, 'Failed to create schedule.')
     return
   }
 
@@ -231,7 +254,7 @@ async function createSchedule() {
   await fetchSchedules({ resetPage: true })
 }
 
-async function runAction(scheduleId, action) {
+async function runAction({ scheduleId, action }) {
   actionLoadingId.value = `${scheduleId}:${action}`
   errorMessage.value = ''
 
@@ -244,14 +267,30 @@ async function runAction(scheduleId, action) {
   actionLoadingId.value = ''
 
   if (response?.error) {
-    errorMessage.value =
-      response.error?.response?.data?.error ||
-      response.error?.message ||
-      `Failed to ${action} schedule.`
+    errorMessage.value = extractErrorMessage(response.error, `Failed to ${action} schedule.`)
     return
   }
 
   await fetchSchedules()
+}
+
+function resetFilters() {
+  filters.status = ''
+  filters.jobName = ''
+  filters.contentType = ''
+  filters.contentId = ''
+  filters.q = ''
+  fetchSchedules({ resetPage: true })
+}
+
+async function onHeaderAction(action) {
+  if (action?.key === 'refreshSchedules') {
+    await fetchSchedules()
+  }
+}
+
+async function goBack() {
+  await router.push({ name: 'dashboard.overview' })
 }
 
 onMounted(async () => {
@@ -260,11 +299,21 @@ onMounted(async () => {
 </script>
 
 <template>
-  <page-wrapper
-    title="Scheduled Jobs"
-    description="Create and manage Agenda-backed publish/unpublish schedules."
-  >
-    <div class="space-y-4">
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="System scheduling"
+        title="Scheduled Jobs"
+        description="Create and manage Agenda-backed publish and unpublish schedules."
+        :actions="headerActions"
+        :loading="loading"
+        back-label="Back to dashboard"
+        @select="onHeaderAction"
+        @back="goBack"
+      />
+    </template>
+
+    <div class="workspace-shell">
       <el-alert
         v-if="errorMessage"
         :closable="false"
@@ -273,15 +322,15 @@ onMounted(async () => {
         :title="errorMessage"
       />
 
-      <el-card shadow="never">
-        <template #header>
-          <span class="font-semibold">Create Schedule</span>
-        </template>
-
-        <el-form label-position="top">
+      <WorkspacePanel
+        eyebrow="Manual schedule creation"
+        title="Create Schedule"
+        description="Target a record, choose the workflow action, and set the run time for the scheduler."
+      >
+        <el-form label-position="top" class="workspace-form" @submit.prevent="createSchedule">
           <AppFormRow :columns="5">
             <el-form-item label="Content Type">
-              <el-select v-model="createForm.contentType">
+              <el-select v-model="createForm.contentType" size="large">
                 <el-option
                   v-for="option in contentTypeOptions"
                   :key="option.value"
@@ -292,7 +341,7 @@ onMounted(async () => {
             </el-form-item>
 
             <el-form-item label="Action">
-              <el-select v-model="createForm.action">
+              <el-select v-model="createForm.action" size="large">
                 <el-option
                   v-for="option in actionOptions"
                   :key="option.value"
@@ -309,162 +358,69 @@ onMounted(async () => {
                 :field="scheduledContentField"
                 :model="createForm"
               />
-              <el-input v-else v-model="createForm.contentId" placeholder="Enter notice ID" />
+              <el-input v-else v-model="createForm.contentId" size="large" placeholder="Enter notice ID" />
             </el-form-item>
 
             <el-form-item label="Run At">
               <el-date-picker
                 v-model="createForm.runAt"
                 type="datetime"
+                size="large"
                 placeholder="Select date and time"
               />
             </el-form-item>
 
             <el-form-item label="Timezone">
-              <el-input v-model="createForm.timezone" placeholder="Africa/Dar_es_Salaam" />
+              <el-input v-model="createForm.timezone" size="large" placeholder="Africa/Dar_es_Salaam" />
             </el-form-item>
           </AppFormRow>
 
-          <div class="mt-4">
-            <el-button type="primary" @click="createSchedule">Create Schedule</el-button>
+          <div class="workspace-form__actions">
+            <el-button type="primary" size="large" native-type="submit">Create Schedule</el-button>
           </div>
         </el-form>
-      </el-card>
+      </WorkspacePanel>
 
-      <el-card shadow="never">
-        <template #header>
-          <div class="flex flex-wrap items-center justify-between gap-3">
-            <span class="font-semibold">Manage Schedules</span>
-            <el-button :loading="loading" @click="fetchSchedules">Refresh</el-button>
-          </div>
-        </template>
+      <WorkspacePanel
+        eyebrow="Scheduler monitor"
+        title="Manage Schedules"
+        description="Filter the queue, inspect scheduled targets, and operate jobs without leaving the workspace."
+      >
+        <OverviewFilterBar
+          :search-query="filters.q"
+          search-label="Search schedules"
+          search-placeholder="Search by name or description"
+          :filter-fields="filterFields"
+          :filter-values="filters"
+          apply-label="Apply filters"
+          reset-label="Clear filters"
+          :loading="loading"
+          :framed="false"
+          @update:search-query="filters.q = $event"
+          @update:filter-values="Object.assign(filters, $event)"
+          @apply="fetchSchedules({ resetPage: true })"
+          @reset="resetFilters"
+        />
 
-        <AppFormRow :columns="6" class="mb-3">
-          <el-select v-model="filters.status" @change="fetchSchedules({ resetPage: true })">
-            <el-option
-              v-for="option in statusOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </el-select>
+        <ScheduleJobsTable
+          :records="schedules"
+          :loading="loading"
+          :action-loading-id="actionLoadingId"
+          :show-name="true"
+          :show-target="true"
+          :show-content-id="true"
+          metadata-date-label="Created"
+          metadata-date-key="createdAt"
+          empty-text="No schedules match the current filters."
+          @run-action="runAction"
+        />
 
-          <el-select v-model="filters.jobName" @change="fetchSchedules({ resetPage: true })">
-            <el-option
-              v-for="option in jobOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </el-select>
-
-          <el-select
-            v-model="filters.contentType"
-            clearable
-            placeholder="Filter by content type"
-            @change="fetchSchedules({ resetPage: true })"
-          >
-            <el-option
-              v-for="option in contentTypeOptions"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </el-select>
-
-          <el-input
-            v-model="filters.contentId"
-            clearable
-            placeholder="Filter by content ID"
-            @keyup.enter="fetchSchedules({ resetPage: true })"
-          />
-
-          <el-input
-            v-model="filters.q"
-            clearable
-            placeholder="Search by name/description"
-            @keyup.enter="fetchSchedules({ resetPage: true })"
-          />
-
-          <el-button
-            :loading="loading"
-            type="primary"
-            plain
-            @click="fetchSchedules({ resetPage: true })"
-            >Apply Filters</el-button
-          >
-        </AppFormRow>
-
-        <el-table v-loading="loading" :data="schedules" stripe size="small">
-          <el-table-column prop="name" label="Name" min-width="220" />
-          <el-table-column label="Target" min-width="180">
-            <template #default="{ row }">{{ scheduleTypeLabel(row) }}</template>
-          </el-table-column>
-          <el-table-column label="Content ID" min-width="180">
-            <template #default="{ row }">{{ row?.data?.contentId || '-' }}</template>
-          </el-table-column>
-          <el-table-column label="Run At" min-width="190">
-            <template #default="{ row }">{{ formatDate(row?.runAt) }}</template>
-          </el-table-column>
-          <el-table-column label="Status" width="130">
-            <template #default="{ row }">
-              <el-tag :type="scheduleStatusType(row?.status)" effect="light">{{
-                row?.status || '-'
-              }}</el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="Created" min-width="180">
-            <template #default="{ row }">{{ formatDate(row?.createdAt) }}</template>
-          </el-table-column>
-          <el-table-column label="Actions" min-width="280" fixed="right">
-            <template #default="{ row }">
-              <div class="flex flex-wrap gap-2">
-                <el-button
-                  size="small"
-                  :loading="actionLoadingId === `${row.scheduleId}:runNow`"
-                  @click="runAction(row.scheduleId, 'runNow')"
-                >
-                  Run Now
-                </el-button>
-
-                <el-button
-                  v-if="row.status === 'active'"
-                  size="small"
-                  type="warning"
-                  :loading="actionLoadingId === `${row.scheduleId}:pause`"
-                  @click="runAction(row.scheduleId, 'pause')"
-                >
-                  Pause
-                </el-button>
-
-                <el-button
-                  v-if="row.status === 'paused'"
-                  size="small"
-                  type="success"
-                  :loading="actionLoadingId === `${row.scheduleId}:resume`"
-                  @click="runAction(row.scheduleId, 'resume')"
-                >
-                  Resume
-                </el-button>
-
-                <el-button
-                  v-if="row.status !== 'cancelled' && row.status !== 'completed'"
-                  size="small"
-                  type="danger"
-                  :loading="actionLoadingId === `${row.scheduleId}:cancel`"
-                  @click="runAction(row.scheduleId, 'cancel')"
-                >
-                  Cancel
-                </el-button>
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <div class="mt-4 flex items-center justify-between gap-2 text-sm text-slate-600">
+        <div class="schedule-pagination">
           <span>Total: {{ total }}</span>
-          <div class="flex items-center gap-2">
+          <div class="schedule-pagination__controls">
             <el-button
+              size="large"
+              plain
               :disabled="page <= 1 || loading"
               @click="
                 () => {
@@ -472,10 +428,15 @@ onMounted(async () => {
                   fetchSchedules()
                 }
               "
-              >Prev</el-button
             >
+              Prev
+            </el-button>
+
             <span>Page {{ page }} / {{ totalPages }}</span>
+
             <el-button
+              size="large"
+              plain
               :disabled="page >= totalPages || loading"
               @click="
                 () => {
@@ -483,11 +444,12 @@ onMounted(async () => {
                   fetchSchedules()
                 }
               "
-              >Next</el-button
             >
+              Next
+            </el-button>
           </div>
         </div>
-      </el-card>
+      </WorkspacePanel>
     </div>
-  </page-wrapper>
+  </PageWrapper>
 </template>

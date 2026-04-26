@@ -1,9 +1,12 @@
 <script setup>
-import PageWrapper from '@/components/common/PageWrapper.vue'
-import AppFileUploadField from '@/components/forms/AppFileUploadField.vue'
-import AppTagInputField from '@/components/forms/AppTagInputField.vue'
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
+import PageWrapper from '@/components/common/PageWrapper.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
+import AppFileUploadField from '@/components/forms/AppFileUploadField.vue'
+import AppTagInputField from '@/components/forms/AppTagInputField.vue'
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -49,17 +52,23 @@ const USAGE_GUIDES = Object.freeze({
   },
 })
 
-const form = reactive({
-  files: [],
-  caption: '',
-  altText: '',
-  usageArea: 'media-center',
-  placement: '',
-  tags: [],
-  credit: '',
-  sortOrder: 0,
-  status: 'draft',
-})
+function createInitialFormState() {
+  return {
+    files: [],
+    caption: '',
+    altText: '',
+    usageArea: 'media-center',
+    placement: '',
+    tags: [],
+    credit: '',
+    sortOrder: 0,
+    status: 'draft',
+  }
+}
+
+const form = reactive(createInitialFormState())
+
+const headerActions = Object.freeze([{ key: 'resetForm', label: 'Reset form' }])
 
 const uploadField = computed(() => ({
   multiple: true,
@@ -71,6 +80,22 @@ const uploadField = computed(() => ({
 }))
 
 const selectedGuide = computed(() => USAGE_GUIDES[form.usageArea] || USAGE_GUIDES['media-center'])
+
+function resetForm() {
+  Object.assign(form, createInitialFormState())
+  errorMessage.value = ''
+  successMessage.value = ''
+}
+
+async function goBack() {
+  await router.push(props.libraryRoute)
+}
+
+async function onHeaderAction(action) {
+  if (action?.key === 'resetForm') {
+    resetForm()
+  }
+}
 
 async function submit() {
   errorMessage.value = ''
@@ -117,17 +142,27 @@ async function submit() {
 </script>
 
 <template>
-  <PageWrapper :title="title" :description="description">
-    <div class="media-upload-shell">
-      <section class="media-upload-panel media-upload-panel--form surface-card">
-        <header class="media-upload-panel__header">
-          <div>
-            <p class="media-upload-eyebrow">Upload workspace</p>
-            <h2>Prepare {{ resourceLabel }}s for the website</h2>
-          </div>
-          <el-button plain @click="router.push(libraryRoute)">Back to library</el-button>
-        </header>
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Upload workspace"
+        :title="title"
+        :description="description"
+        :actions="headerActions"
+        :loading="submitting"
+        back-label="Back to library"
+        @select="onHeaderAction"
+        @back="goBack"
+      />
+    </template>
 
+    <div class="media-upload-shell">
+      <WorkspacePanel
+        class="media-upload-panel"
+        eyebrow="Upload form"
+        :title="`Prepare ${resourceLabel}s for the website`"
+        description="Add clear captions, accessibility text, and placement metadata before sending files to the library."
+      >
         <el-form label-position="top" class="media-upload-form" @submit.prevent="submit">
           <el-form-item label="Image files" required>
             <AppFileUploadField v-model="form.files" :field="uploadField" :disabled="submitting" />
@@ -153,7 +188,7 @@ async function submit() {
             </el-form-item>
 
             <el-form-item label="Website usage area">
-              <el-select v-model="form.usageArea">
+              <el-select v-model="form.usageArea" size="large">
                 <el-option
                   v-for="(guide, key) in USAGE_GUIDES"
                   :key="key"
@@ -166,17 +201,19 @@ async function submit() {
             <el-form-item label="Placement or collection">
               <el-input
                 v-model="form.placement"
+                size="large"
                 placeholder="Homepage lead, media center, gallery, leadership profile"
               />
             </el-form-item>
 
             <el-form-item label="Display order">
-              <el-input-number v-model="form.sortOrder" :min="0" :step="1" />
+              <el-input-number v-model="form.sortOrder" :min="0" :step="1" size="large" />
             </el-form-item>
 
             <el-form-item label="Credit">
               <el-input
                 v-model="form.credit"
+                size="large"
                 placeholder="Photographer, FCC archive, external source"
               />
             </el-form-item>
@@ -188,7 +225,7 @@ async function submit() {
             </el-form-item>
 
             <el-form-item label="Initial status">
-              <el-select v-model="form.status">
+              <el-select v-model="form.status" size="large">
                 <el-option label="Draft" value="draft" />
                 <el-option label="Published" value="published" />
               </el-select>
@@ -196,8 +233,8 @@ async function submit() {
           </div>
 
           <div class="media-upload-actions">
-            <el-button @click="router.push(libraryRoute)">Cancel</el-button>
-            <el-button type="primary" :loading="submitting" native-type="submit">
+            <el-button size="large" plain @click="goBack">Cancel</el-button>
+            <el-button type="primary" size="large" :loading="submitting" native-type="submit">
               Upload {{ resourceLabel }}s
             </el-button>
           </div>
@@ -217,13 +254,15 @@ async function submit() {
             :title="errorMessage"
           />
         </el-form>
-      </section>
+      </WorkspacePanel>
 
-      <aside class="media-upload-panel media-upload-panel--guide surface-card">
-        <p class="media-upload-eyebrow">Best-practice guide</p>
-        <h2>{{ selectedGuide.label }}</h2>
-        <p class="media-upload-guide__note">{{ selectedGuide.note }}</p>
-
+      <WorkspacePanel
+        tag="aside"
+        class="media-upload-panel"
+        eyebrow="Best-practice guide"
+        :title="selectedGuide.label"
+        :description="selectedGuide.note"
+      >
         <div class="media-upload-guide__stats">
           <div class="media-upload-guide__stat">
             <span>Recommended ratio</span>
@@ -242,87 +281,7 @@ async function submit() {
           title="Editorial advice"
           description="Avoid blurry crops, text baked into the image, or subjects pressed against the frame edge. Leave enough breathing room for responsive layouts."
         />
-      </aside>
+      </WorkspacePanel>
     </div>
   </PageWrapper>
 </template>
-
-<style scoped>
-.media-upload-shell,
-.media-upload-form {
-  display: grid;
-  gap: 1rem;
-}
-
-.media-upload-panel {
-  padding: 1.25rem;
-}
-
-.media-upload-panel__header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.9rem;
-  margin-bottom: 1rem;
-}
-
-.media-upload-eyebrow {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--fcc-secondary-700);
-}
-
-.media-upload-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.media-upload-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
-
-.media-upload-guide__note {
-  margin-top: 0.5rem;
-  color: var(--fcc-text-muted);
-}
-
-.media-upload-guide__stats {
-  display: grid;
-  gap: 0.75rem;
-  margin-block: 1rem;
-}
-
-.media-upload-guide__stat {
-  border: 1px solid var(--fcc-border);
-  border-radius: 1rem;
-  background: color-mix(in srgb, var(--fcc-surface) 96%, var(--fcc-primary-50));
-  padding: 0.9rem 1rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.media-upload-guide__stat span {
-  color: var(--fcc-text-muted);
-}
-
-.media-upload-guide__stat strong {
-  color: var(--fcc-text);
-}
-
-@media (min-width: 1024px) {
-  .media-upload-shell {
-    grid-template-columns: minmax(0, 1.2fr) minmax(19rem, 0.8fr);
-    align-items: start;
-  }
-
-  .media-upload-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-</style>

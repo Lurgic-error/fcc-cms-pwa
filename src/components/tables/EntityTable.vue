@@ -27,6 +27,7 @@ const props = defineProps({
   actions: { type: [Array, Function], default: () => [] },
   selectable: { type: Boolean, default: false },
   selectedRowKeys: { type: Array, default: () => [] },
+  framed: { type: Boolean, default: true },
 })
 
 const emit = defineEmits([
@@ -113,97 +114,106 @@ function onMobileSelectionChange(row, checked) {
 </script>
 
 <template>
-  <section class="surface-card p-4 md:p-5">
-    <header class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-      <div>
-        <h2 class="section-title">{{ title }}</h2>
-        <p v-if="description" class="mt-1 text-sm text-slate-600">{{ description }}</p>
+  <section class="entity-table-shell" :class="{ 'surface-card': framed }">
+    <header class="entity-table__header">
+      <div class="entity-table__copy">
+        <h2 class="entity-table__title">{{ title }}</h2>
+        <p v-if="description" class="entity-table__description">{{ description }}</p>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2">
+      <div class="entity-table__toolbar">
         <AppSearchField
           v-if="showSearch"
-          class="w-full md:w-[22rem]"
           :label="searchLabel"
           :placeholder="searchPlaceholder"
           :model-value="searchQuery"
           @update:model-value="$emit('update:searchQuery', $event)"
         />
-        <el-button v-if="showRefresh" plain :loading="loading" @click="$emit('refresh')">
+        <el-button v-if="showRefresh" size="large" plain :loading="loading" @click="$emit('refresh')">
           Refresh
         </el-button>
-        <el-button v-if="showCreate" type="primary" :disabled="loading" @click="$emit('create')">
+        <el-button
+          v-if="showCreate"
+          size="large"
+          type="primary"
+          :disabled="loading"
+          @click="$emit('create')"
+        >
           {{ createLabel }}
         </el-button>
       </div>
     </header>
 
-    <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" class="mb-3" />
+    <el-alert
+      v-if="error"
+      :title="error"
+      type="error"
+      show-icon
+      :closable="false"
+      class="app-inline-alert app-inline-alert--compact"
+    />
 
-    <el-table
-      :data="records"
-      :row-key="getRowKey"
-      stripe
-      border
-      v-loading="loading"
-      class="hidden md:table"
-      @selection-change="onSelectionChange"
-      @row-click="onRowClick"
-    >
-      <el-table-column v-if="selectable" type="selection" width="52" reserve-selection />
-
-      <el-table-column
-        v-for="column in resolvedColumns"
-        :key="column.key"
-        :prop="column.key"
-        :label="column.label"
-        :width="column.width"
-        :min-width="column.minWidth || 140"
+    <div class="workspace-table workspace-table--scroll entity-table__desktop-shell">
+      <el-table
+        :data="records"
+        :row-key="getRowKey"
+        stripe
+        v-loading="loading"
+        class="entity-table__desktop"
+        @selection-change="onSelectionChange"
+        @row-click="onRowClick"
       >
-        <template #default="{ row }">
-          <StatusBadge
-            v-if="cellValue(row, column).isStatus"
-            :value="cellValue(row, column).rawValue || cellValue(row, column).formattedValue"
-            :label="cellValue(row, column).formattedValue"
-          />
-          <span v-else>{{ cellValue(row, column).formattedValue }}</span>
-        </template>
-      </el-table-column>
+        <el-table-column v-if="selectable" type="selection" width="52" reserve-selection />
 
-      <el-table-column
-        v-if="actions.length || typeof actions === 'function'"
-        label="Actions"
-        min-width="180"
-        fixed="right"
-      >
-        <template #default="{ row }">
-          <EntityActionsDropdown
-            :actions="getRowActions(row)"
-            label="Actions"
-            size="small"
-            plain
-            :disabled="loading"
-            :loading="loading"
-            @select="onAction($event, row)"
-          />
-        </template>
-      </el-table-column>
-    </el-table>
+        <el-table-column
+          v-for="column in resolvedColumns"
+          :key="column.key"
+          :prop="column.key"
+          :label="column.label"
+          :width="column.width"
+          :min-width="column.minWidth || 140"
+        >
+          <template #default="{ row }">
+            <StatusBadge
+              v-if="cellValue(row, column).isStatus"
+              :value="cellValue(row, column).rawValue || cellValue(row, column).formattedValue"
+              :label="cellValue(row, column).formattedValue"
+            />
+            <span v-else>{{ cellValue(row, column).formattedValue }}</span>
+          </template>
+        </el-table-column>
 
-    <div class="md:hidden mt-4">
-      <AppDetailGrid columns="1">
+        <el-table-column
+          v-if="actions.length || typeof actions === 'function'"
+          label="Actions"
+          min-width="180"
+          fixed="right"
+        >
+          <template #default="{ row }">
+            <EntityActionsDropdown
+              :actions="getRowActions(row)"
+              label="Actions"
+              size="small"
+              plain
+              :disabled="loading"
+              :loading="loading"
+              @select="onAction($event, row)"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+
+    <div class="entity-table__mobile entity-table__mobile-shell">
+      <div class="entity-table__mobile-list">
+        <AppDetailGrid columns="1">
         <article
           v-for="row in records"
           :key="getRowKey(row)"
-          class="p-3 shadow-sm border"
-          style="
-            background-color: var(--fcc-surface);
-            border-color: var(--fcc-border);
-            border-radius: var(--fcc-radius-lg);
-          "
+          class="enterprise-mobile-record-card"
           @click="onRowClick(row)"
         >
-          <div v-if="selectable" class="mb-3 flex justify-end">
+          <div v-if="selectable" class="entity-table__mobile-select">
             <el-checkbox
               :model-value="isSelected(row)"
               @click.stop
@@ -213,25 +223,25 @@ function onMobileSelectionChange(row, checked) {
             </el-checkbox>
           </div>
 
-          <div class="grid gap-2">
+          <div class="entity-table__mobile-grid">
             <div
               v-for="column in resolvedColumns"
               :key="`${getRowKey(row)}-${column.key}`"
-              class="flex items-start justify-between gap-3 text-sm"
+              class="entity-table__mobile-row"
             >
-              <span class="text-slate-500">{{ column.label }}</span>
+              <span class="entity-table__mobile-label">{{ column.label }}</span>
               <StatusBadge
                 v-if="cellValue(row, column).isStatus"
                 :value="cellValue(row, column).rawValue || cellValue(row, column).formattedValue"
                 :label="cellValue(row, column).formattedValue"
               />
-              <span v-else class="text-right font-medium text-slate-900">
+              <span v-else class="entity-table__mobile-value">
                 {{ cellValue(row, column).formattedValue }}
               </span>
             </div>
           </div>
 
-          <div v-if="getRowActions(row).length" class="mt-3 flex justify-end">
+          <div v-if="getRowActions(row).length" class="entity-table__mobile-actions">
             <EntityActionsDropdown
               :actions="getRowActions(row)"
               label="Actions"
@@ -243,10 +253,11 @@ function onMobileSelectionChange(row, checked) {
             />
           </div>
         </article>
-      </AppDetailGrid>
+        </AppDetailGrid>
+      </div>
     </div>
 
-    <p v-if="!loading && records.length === 0" class="mt-3 text-sm text-slate-500">
+    <p v-if="!loading && records.length === 0" class="entity-table__empty">
       {{ emptyText }}
     </p>
   </section>

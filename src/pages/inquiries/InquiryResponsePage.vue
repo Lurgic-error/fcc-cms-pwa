@@ -1,8 +1,7 @@
 <script setup>
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
-import AppDetailCard from '@/components/common/detail/AppDetailCard.vue'
-import AppDetailGrid from '@/components/common/detail/AppDetailGrid.vue'
-import AppDetailItem from '@/components/common/detail/AppDetailItem.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
 import { inquiriesAPI } from '@/api'
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -22,6 +21,7 @@ const senderName = computed(() => inquiry.value?.sender?.fullName || 'Unknown se
 const senderEmail = computed(() => inquiry.value?.sender?.email || '-')
 const senderPhone = computed(() => inquiry.value?.sender?.phoneNumber || '-')
 const currentStatus = computed(() => inquiry.value?.status || 'pending')
+const headerActions = Object.freeze([{ key: 'refresh', label: 'Refresh inquiry' }])
 
 function formatDate(value) {
   if (!value) return '-'
@@ -83,162 +83,132 @@ async function goToDetails() {
   await router.push({ name: 'inquiries.details', params: { inquiryId: inquiryId.value } })
 }
 
+async function onHeaderAction(action) {
+  if (action?.key === 'refresh') {
+    await loadInquiry()
+  }
+}
+
 onMounted(loadInquiry)
 </script>
 
 <template>
-  <PageWrapper
-    title="Respond to Inquiry"
-    description="Review the inquiry context and capture the official response."
-  >
-    <div class="page">
-      <div class="toolbar">
-        <button class="btn btn-muted" type="button" @click="goToDetails">View Details</button>
-        <button class="btn btn-muted" type="button" :disabled="loading" @click="loadInquiry">
-          Refresh
-        </button>
-      </div>
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Inquiry Workspace"
+        title="Respond to Inquiry"
+        description="Review the inquiry context and capture the official response."
+        :actions="headerActions"
+        :loading="loading || submitting"
+        back-label="Back to inquiry"
+        @select="onHeaderAction"
+        @back="goToDetails"
+      />
+    </template>
 
-      <p v-if="loading">Loading inquiry...</p>
-      <p v-else-if="errorMessage" class="error">{{ errorMessage }}</p>
+    <div class="workspace-shell">
+      <WorkspacePanel
+        eyebrow="Inquiry workspace"
+        title="Review the request and prepare the official response"
+      >
+        <el-alert
+          v-if="loading"
+          type="info"
+          show-icon
+          :closable="false"
+          title="Loading inquiry..."
+        />
+        <el-alert
+          v-else-if="errorMessage && !inquiry"
+          type="error"
+          show-icon
+          :closable="false"
+          :title="errorMessage"
+        />
+      </WorkspacePanel>
 
-      <template v-else-if="inquiry">
-        <AppDetailCard title="Inquiry Summary">
-          <AppDetailGrid columns="3">
-            <AppDetailItem label="Inquiry ID" :value="inquiry.inquiryId" />
-            <AppDetailItem label="Status" :value="currentStatus" />
-            <AppDetailItem label="Sender" :value="senderName" />
-            <AppDetailItem label="Email" :value="senderEmail" />
-            <AppDetailItem label="Phone" :value="senderPhone" />
-            <AppDetailItem
-              label="Updated"
-              :value="formatDate(inquiry.lastModifiedAt || inquiry.updatedAt || inquiry.createdAt)"
+      <template v-if="inquiry">
+        <section class="workspace-grid">
+          <WorkspacePanel
+            tag="article"
+            eyebrow="Inquiry summary"
+            :title="inquiry.inquiryId || 'Active inquiry'"
+          >
+            <div class="workspace-summary">
+              <div class="workspace-summary__row">
+                <span>Status</span>
+                <strong>{{ currentStatus }}</strong>
+              </div>
+              <div class="workspace-summary__row">
+                <span>Sender</span>
+                <strong>{{ senderName }}</strong>
+              </div>
+              <div class="workspace-summary__row">
+                <span>Email</span>
+                <strong>{{ senderEmail }}</strong>
+              </div>
+              <div class="workspace-summary__row">
+                <span>Phone</span>
+                <strong>{{ senderPhone }}</strong>
+              </div>
+              <div class="workspace-summary__row">
+                <span>Updated</span>
+                <strong>{{
+                  formatDate(inquiry.lastModifiedAt || inquiry.updatedAt || inquiry.createdAt)
+                }}</strong>
+              </div>
+            </div>
+          </WorkspacePanel>
+
+          <WorkspacePanel
+            tag="article"
+            eyebrow="Original message"
+            title="What the requester sent"
+          >
+            <p class="workspace-message">{{ inquiry.message || '-' }}</p>
+          </WorkspacePanel>
+        </section>
+
+        <WorkspacePanel eyebrow="Official response" title="Write and save the answer">
+          <p v-if="inquiry.respondedAt" class="workspace-hint">
+            Last responded {{ formatDate(inquiry.respondedAt) }}
+          </p>
+
+          <el-form label-position="top" class="workspace-form" @submit.prevent="submitResponse">
+            <el-form-item label="Response" class="form-item-flush">
+              <el-input
+                v-model="responseText"
+                type="textarea"
+                :rows="10"
+                placeholder="Write the official FCC response here."
+              />
+            </el-form-item>
+
+            <el-alert
+              v-if="successMessage"
+              type="success"
+              show-icon
+              :closable="false"
+              :title="successMessage"
             />
-          </AppDetailGrid>
-        </AppDetailCard>
+            <el-alert
+              v-if="errorMessage"
+              type="error"
+              show-icon
+              :closable="false"
+              :title="errorMessage"
+            />
 
-        <section class="card mt-4">
-          <h2>Original Message</h2>
-          <p class="message">{{ inquiry.message || '-' }}</p>
-        </section>
-
-        <section class="card">
-          <div class="section-header">
-            <h2>Official Response</h2>
-            <span v-if="inquiry.respondedAt" class="muted"
-              >Last responded {{ formatDate(inquiry.respondedAt) }}</span
-            >
-          </div>
-
-          <textarea
-            v-model="responseText"
-            rows="10"
-            class="response-input"
-            placeholder="Write the official FCC response here."
-          />
-
-          <p v-if="successMessage" class="success">{{ successMessage }}</p>
-
-          <div class="actions">
-            <button
-              class="btn btn-primary"
-              type="button"
-              :disabled="submitting"
-              @click="submitResponse"
-            >
-              {{ submitting ? 'Saving...' : 'Save Response' }}
-            </button>
-          </div>
-        </section>
+            <div class="workspace-form__actions">
+              <el-button size="large" plain @click="goToDetails">View inquiry details</el-button>
+              <el-button size="large" type="primary" native-type="submit" :loading="submitting">
+                Save response
+              </el-button>
+            </div>
+          </el-form>
+        </WorkspacePanel>
       </template>
     </div>
   </PageWrapper>
 </template>
-
-<style scoped>
-.page {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.card {
-  border: 1px solid var(--color-fcc-border);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  background: var(--color-surface);
-}
-
-.label {
-  color: var(--color-fcc-text-muted);
-  font-size: 0.82rem;
-  margin-bottom: 0.2rem;
-}
-
-.message {
-  white-space: pre-wrap;
-  line-height: 1.5;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  align-items: center;
-  margin-bottom: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.response-input {
-  width: 100%;
-  border: 1px solid var(--color-secondary-300);
-  border-radius: 0.5rem;
-  padding: 0.8rem;
-  resize: vertical;
-  min-height: 12rem;
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 0.9rem;
-}
-
-.btn {
-  border: 1px solid var(--color-secondary-300);
-  border-radius: 0.375rem;
-  padding: 0.45rem 0.8rem;
-  cursor: pointer;
-}
-
-.btn-primary {
-  background: var(--color-primary-600);
-  border-color: var(--color-primary-600);
-  color: var(--color-surface);
-}
-
-.btn-muted {
-  background: var(--color-surface-muted);
-}
-
-.muted {
-  color: var(--color-fcc-text-muted);
-  font-size: 0.85rem;
-}
-
-.success {
-  color: var(--color-success);
-  margin-top: 0.75rem;
-}
-
-.error {
-  color: var(--color-danger);
-}
-</style>

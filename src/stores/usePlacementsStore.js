@@ -11,13 +11,15 @@ export const usePlacementsStore = defineStore('cms-placements', () => {
   })
 
   async function reorder(pageId, regionKey, placementIds = []) {
-    const res = await contentManagementAPI.placements.reorder({
-      pageId,
-      regionKey,
-      placementIds,
+    return base.withAsync(async () => {
+      const res = await contentManagementAPI.placements.reorder({
+        pageId,
+        regionKey,
+        placementIds,
+      })
+      if (res?.error) base.handleError(res)
+      return base.setEntitiesState(res?.placements || [])
     })
-    if (res?.error) throw new Error(res.error)
-    return res?.placements || []
   }
 
   return {

@@ -2,6 +2,7 @@ import { localesAPI } from '@/api'
 import { createWorkflowEntityStore } from '@/stores/_shared/createWorkflowEntityStore'
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { withWorkflowState, withWorkflowStateList } from '@/utils/contentWorkflow'
 
 export const useLocalesStore = defineStore('cms-locales', () => {
   const base = createWorkflowEntityStore({
@@ -19,34 +20,82 @@ export const useLocalesStore = defineStore('cms-locales', () => {
     return activeLocales.value.find((locale) => locale?.isDefault) || null
   })
 
-  async function listActive() {
-    const res = await localesAPI.listActive()
-    if (res?.error) throw new Error(res.error)
-    activeLocales.value = res?.locales || []
+  function applyActiveLocales(nextLocales = []) {
+    activeLocales.value = withWorkflowStateList(nextLocales)
     return activeLocales.value
   }
 
-  async function resolveFallbackChain(locale) {
-    const res = await localesAPI.resolveFallbackChain(locale)
-    if (res?.error) throw new Error(res.error)
+  function syncLocaleState(nextLocale = {}, { ensureSingleDefault = false } = {}) {
+    const normalized = withWorkflowState(nextLocale)
+    const nextId = normalized?.localeId
 
-    fallbackRequestedLocale.value = res?.requestedLocale || null
-    fallbackChain.value = res?.fallbackChain || []
-    return fallbackChain.value
+    const updateLocaleList = (list = []) =>
+      withWorkflowStateList(
+        list.map((item) => {
+          if (ensureSingleDefault && normalized.isDefault && item?.localeId !== nextId) {
+            return { ...item, isDefault: false }
+          }
+
+          return item?.localeId === nextId ? normalized : item
+        }),
+      )
+
+    if (Array.isArray(base.entities.value) && base.entities.value.length) {
+      base.setEntitiesState(updateLocaleList(base.entities.value))
+    }
+
+    if (Array.isArray(activeLocales.value) && activeLocales.value.length) {
+      activeLocales.value = updateLocaleList(activeLocales.value)
+    }
+
+    if (base.entity.value?.localeId === nextId) {
+      base.syncEntity(normalized)
+    }
+
+    return normalized
+  }
+
+  async function listActive() {
+    return base.withAsync(async () => {
+      const res = await localesAPI.listActive()
+      if (res?.error) base.handleError(res)
+      return applyActiveLocales(res?.locales || [])
+    })
+  }
+
+  async function resolveFallbackChain(locale) {
+    return base.withAsync(async () => {
+      const res = await localesAPI.resolveFallbackChain(locale)
+      if (res?.error) base.handleError(res)
+
+      fallbackRequestedLocale.value = res?.requestedLocale || null
+      fallbackChain.value = res?.fallbackChain || []
+      return fallbackChain.value
+    })
   }
 
   async function setDefault(localeId) {
-    const res = await localesAPI.setDefault(localeId)
-    if (res?.error) throw new Error(res.error)
-    await listActive()
-    return res?.locale || res
+    return base.withAsync(async () => {
+      const res = await localesAPI.setDefault(localeId)
+      if (res?.error) base.handleError(res)
+
+      const nextLocale = res?.locale || res
+      syncLocaleState(nextLocale, { ensureSingleDefault: true })
+      await listActive()
+      return nextLocale
+    })
   }
 
   async function setActive(localeId, isActive) {
-    const res = await localesAPI.setActive(localeId, isActive)
-    if (res?.error) throw new Error(res.error)
-    await listActive()
-    return res?.locale || res
+    return base.withAsync(async () => {
+      const res = await localesAPI.setActive(localeId, isActive)
+      if (res?.error) base.handleError(res)
+
+      const nextLocale = res?.locale || res
+      syncLocaleState(nextLocale)
+      await listActive()
+      return nextLocale
+    })
   }
 
   return {

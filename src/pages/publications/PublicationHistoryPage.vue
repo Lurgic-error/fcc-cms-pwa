@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 import { publicationsAPI } from '@/api'
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
 import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
@@ -42,10 +43,24 @@ const timeline = computed(() => {
     }))
 })
 
+const headerActions = computed(() =>
+  publicationId.value ? [{ key: 'viewDetails', label: 'View Details' }] : [],
+)
+
 function resolveBy(by) {
   if (!by) return null
   if (typeof by === 'string') return by
   return by?.fullName || by?.name || by?.email || String(by?._id || by?.userId || '')
+}
+
+function goBack() {
+  router.push({ name: 'publications.list' })
+}
+
+function onHeaderAction(action) {
+  if (action?.key !== 'viewDetails' || !publicationId.value) return
+
+  router.push({ name: 'publications.details', params: { publicationId: publicationId.value } })
 }
 
 async function loadPublication() {
@@ -72,84 +87,68 @@ watch(publicationId, (next, prev) => {
 <template>
   <PageWrapper>
     <template #header>
-      <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Publication History
-          </p>
-          <h1 class="text-3xl font-semibold text-slate-950">
-            {{ resolveLocalizedLabel(publication, 'Publication') }}
-          </h1>
-          <p class="max-w-4xl text-sm text-slate-600">
-            Lifecycle timeline showing every workflow transition, who triggered it, and when.
-          </p>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <el-button plain @click="router.push({ name: 'publications.list' })">
-            All Publications
-          </el-button>
-          <el-button
-            v-if="publicationId"
-            type="primary"
-            @click="router.push({ name: 'publications.details', params: { publicationId } })"
-          >
-            View Details
-          </el-button>
-        </div>
-      </div>
+      <EnterprisePageHeader
+        eyebrow="Publication History"
+        :title="resolveLocalizedLabel(publication, 'Publication')"
+        description="Lifecycle timeline showing every workflow transition, who triggered it, and when."
+        :actions="headerActions"
+        @select="onHeaderAction"
+        @back="goBack"
+      />
     </template>
 
-    <div class="space-y-4">
+    <div class="enterprise-stack">
       <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" />
 
       <AppBentoGrid columns="2">
-        <el-card shadow="never" class="border border-slate-200" v-loading="loading">
-          <template #header>
-            <div class="flex items-center justify-between gap-2">
-              <span class="font-semibold text-slate-900">Current State</span>
+        <AppDetailCard title="Current State">
+          <template #header-actions>
+            <div v-if="publication">
               <StatusBadge
                 :value="publication?.effectiveStatus || publication?.publicationStatus"
               />
             </div>
           </template>
-          <div class="space-y-2 text-sm text-slate-700">
-            <div class="flex items-center justify-between">
-              <span>Publication ID</span>
-              <code class="text-xs text-slate-500">{{ publication?.publicationId || '-' }}</code>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>Created</span>
-              <strong>{{ formatDisplayDate(publication?.createdAt) }}</strong>
-            </div>
-            <div class="flex items-center justify-between">
-              <span>Last modified</span>
-              <strong>{{ formatDisplayDate(publication?.lastModifiedAt) }}</strong>
-            </div>
+
+          <div v-loading="loading">
+            <AppDetailGrid :columns="1">
+              <AppDetailItem label="Publication ID" direction="horizontal">
+                <code class="enterprise-detail-code">{{ publication?.publicationId || '-' }}</code>
+              </AppDetailItem>
+              <AppDetailItem label="Created" direction="horizontal">
+                <span class="detail-item__emphasis">{{
+                  formatDisplayDate(publication?.createdAt)
+                }}</span>
+              </AppDetailItem>
+              <AppDetailItem label="Last modified" direction="horizontal">
+                <span class="detail-item__emphasis">{{
+                  formatDisplayDate(publication?.lastModifiedAt)
+                }}</span>
+              </AppDetailItem>
+            </AppDetailGrid>
           </div>
-        </el-card>
+        </AppDetailCard>
 
-        <el-card shadow="never" class="border border-slate-200">
-          <template #header>
-            <span class="font-semibold text-slate-900">Workflow Timeline</span>
-          </template>
+        <AppDetailCard title="Workflow Timeline">
+          <div v-loading="loading">
+            <el-timeline v-if="timeline.length" class="enterprise-timeline">
+              <el-timeline-item
+                v-for="(event, index) in timeline"
+                :key="index"
+                :timestamp="formatDisplayDate(event.timestamp)"
+                placement="top"
+              >
+                <p class="enterprise-timeline__event-title">{{ event.label }}</p>
+                <p v-if="resolveBy(event.by)" class="enterprise-timeline__meta">
+                  by {{ resolveBy(event.by) }}
+                </p>
+                <p v-if="event.note" class="enterprise-timeline__note">"{{ event.note }}"</p>
+              </el-timeline-item>
+            </el-timeline>
 
-          <el-timeline v-if="timeline.length" class="mt-2">
-            <el-timeline-item
-              v-for="(event, index) in timeline"
-              :key="index"
-              :timestamp="formatDisplayDate(event.timestamp)"
-              placement="top"
-            >
-              <p class="font-medium text-slate-800">{{ event.label }}</p>
-              <p v-if="resolveBy(event.by)" class="text-sm text-slate-500">
-                by {{ resolveBy(event.by) }}
-              </p>
-              <p v-if="event.note" class="mt-1 text-sm italic text-slate-500">"{{ event.note }}"</p>
-            </el-timeline-item>
-          </el-timeline>
-
-          <el-empty v-else-if="!loading" description="No lifecycle events recorded yet." />
-        </el-card>
+            <el-empty v-else-if="!loading" description="No lifecycle events recorded yet." />
+          </div>
+        </AppDetailCard>
       </AppBentoGrid>
     </div>
   </PageWrapper>

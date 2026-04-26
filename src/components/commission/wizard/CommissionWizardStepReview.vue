@@ -1,5 +1,5 @@
 <script setup>
-import CommissionWizardSectionCard from './CommissionWizardSectionCard.vue'
+import AppSurfaceSection from '@/components/common/AppSurfaceSection.vue'
 
 defineProps({
   reviewSections: { type: Array, default: () => [] },
@@ -32,7 +32,7 @@ defineExpose({ validate })
       </template>
     </el-alert>
 
-    <CommissionWizardSectionCard
+    <AppSurfaceSection class="commission-wizard-section" title-tag="h3"
       title="Review commission sections"
       description="Use the summary below to confirm what is complete, what still needs work, and where to jump back."
     >
@@ -79,77 +79,6 @@ defineExpose({ validate })
           </el-button>
         </article>
       </div>
-    </CommissionWizardSectionCard>
+    </AppSurfaceSection>
   </div>
 </template>
-
-<style scoped>
-.commission-review {
-  display: grid;
-  gap: 1rem;
-}
-
-.commission-review__missing {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
-}
-
-.commission-review__missing span {
-  padding: 0.35rem 0.7rem;
-  border-radius: 999px;
-  background: rgb(254 240 138 / 0.55);
-  color: rgb(133 77 14);
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.commission-review__grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-}
-
-.commission-review__card {
-  display: grid;
-  gap: 0.9rem;
-  padding: 1rem;
-  border-radius: 1rem;
-  border: 1px solid rgb(226 232 240 / 0.95);
-  background: rgb(255 255 255 / 0.92);
-}
-
-.commission-review__card.is-missing {
-  border-color: rgb(245 158 11 / 0.4);
-  background: rgb(255 251 235 / 0.92);
-}
-
-.commission-review__card-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.commission-review__card h3 {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 700;
-  color: rgb(15 23 42);
-}
-
-.commission-review__card p {
-  margin: 0.35rem 0 0;
-  color: rgb(71 85 105);
-  line-height: 1.55;
-}
-
-.commission-review__details {
-  margin: 0;
-  padding-left: 1rem;
-  color: rgb(51 65 85);
-  display: grid;
-  gap: 0.35rem;
-}
-</style>

@@ -27,8 +27,8 @@ function next() {
   emit('update:page', page + 1)
 }
 
-function changeLimit(event) {
-  const nextLimit = Number(event?.target?.value || 20)
+function changeLimit(value) {
+  const nextLimit = Number(value || 20)
   emit('update:limit', nextLimit)
 }
 </script>
@@ -43,81 +43,33 @@ function changeLimit(event) {
     <div class="controls">
       <label class="limit">
         Rows
-        <select :value="pagination?.limit || 20" @change="changeLimit">
-          <option v-for="option in limitOptions" :key="option" :value="option">
-            {{ option }}
-          </option>
-        </select>
+        <el-select
+          :model-value="pagination?.limit || 20"
+          size="large"
+          class="table-pagination__select"
+          :disabled="loading"
+          @update:model-value="changeLimit"
+        >
+          <el-option v-for="option in limitOptions" :key="option" :label="String(option)" :value="option" />
+        </el-select>
       </label>
 
-      <button
-        class="btn"
-        type="button"
+      <el-button
+        size="large"
+        plain
         :disabled="loading || (pagination?.page || 1) <= 1"
         @click="prev"
       >
         Prev
-      </button>
-      <button
-        class="btn"
-        type="button"
+      </el-button>
+      <el-button
+        size="large"
+        plain
         :disabled="loading || (pagination?.page || 1) >= (pagination?.totalPages || 1)"
         @click="next"
       >
         Next
-      </button>
+      </el-button>
     </div>
   </div>
 </template>
-
-<style scoped>
-.table-pagination {
-  margin-top: 0.75rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.summary {
-  color: var(--fcc-text-muted);
-  font-size: 0.85rem;
-}
-
-.controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.limit {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  color: var(--fcc-text-muted);
-}
-
-.limit select {
-  border: 1px solid var(--fcc-border);
-  border-radius: 0.375rem;
-  padding: 0.3rem 0.45rem;
-  background: var(--fcc-surface);
-  color: var(--fcc-text);
-}
-
-.btn {
-  border: 1px solid var(--fcc-border);
-  border-radius: 0.375rem;
-  padding: 0.35rem 0.65rem;
-  background: var(--fcc-surface);
-  color: var(--fcc-text);
-  cursor: pointer;
-}
-
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-</style>

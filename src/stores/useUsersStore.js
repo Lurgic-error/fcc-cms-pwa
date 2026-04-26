@@ -27,12 +27,16 @@ function extractRoleNames(entries = []) {
   return [...new Set(names)]
 }
 
+// Editorial workflow hierarchy:
+//   author    → drafts content, submits for approval
+//   reviewer  → reads/comments on submissions (no formal approval)
+//   editor    → edits any draft, submits
+//   publisher → sole approver and publisher; admin-tier bypass
 const ROLE_PERMISSION_MAP = Object.freeze({
-  admin: ['create', 'update', 'delete', 'review', 'publish', 'archive'],
-  'system admin': ['create', 'update', 'delete', 'review', 'publish', 'archive'],
-  publisher: ['create', 'update', 'delete', 'publish', 'archive'],
-  editor: ['create', 'update'],
+  author: ['create'],
   reviewer: ['review'],
+  editor: ['create', 'update'],
+  publisher: ['create', 'update', 'delete', 'review', 'publish', 'archive'],
 })
 
 function extractPermissions(entries = [], explicitPermissions = []) {

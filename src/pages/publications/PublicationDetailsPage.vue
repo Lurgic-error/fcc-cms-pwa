@@ -2,11 +2,11 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
 import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
 import EntityDetailsPanel from '@/components/enterprise/EntityDetailsPanel.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
-import EntityActionsDropdown from '@/components/workflow/EntityActionsDropdown.vue'
 import { getResourceConfig } from '@/modules/crud/resourceConfigs'
 import { useEditorialActions } from '@/composables/useEditorialActions'
 import { useEntityCrud } from '@/composables/useEntityCrud'
@@ -85,31 +85,17 @@ watch(publicationId, (nextId, previousId) => {
 <template>
   <PageWrapper>
     <template #header>
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between w-full">
-        <div>
-          <h1 class="page-title fcc-page-title">
-            {{ resolveLocalizedLabel(publication, 'Publication') }}
-          </h1>
-          <p class="page-description fcc-page-subtitle mt-1">
-            Review category assignment, lifecycle state, and whether this publication is actually
-            visible on the public website.
-          </p>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <el-button plain round @click="goToList">Back</el-button>
-          <EntityActionsDropdown
-            :actions="detailActions"
-            label="Actions"
-            type="primary"
-            :loading="loading"
-            @select="onAction"
-          />
-        </div>
-      </div>
+      <EnterprisePageHeader
+        :title="resolveLocalizedLabel(publication, 'Publication')"
+        description="Review category assignment, lifecycle state, and whether this publication is actually visible on the public website."
+        :actions="detailActions"
+        :loading="loading"
+        @select="onAction"
+        @back="goToList"
+      />
     </template>
 
-    <div class="space-y-6 mt-4">
+    <div class="enterprise-stack enterprise-stack--spacious">
       <el-alert
         v-if="categoryError"
         :title="categoryError"
@@ -144,10 +130,8 @@ watch(publicationId, (nextId, previousId) => {
             <AppDetailItem label="Category status">
               <StatusBadge :value="categoryStatus" :label="getStatusLabel(categoryStatus)" />
             </AppDetailItem>
-            <AppDetailItem colSpan="full">
-              <span class="text-sm italic text-[var(--fcc-text-muted)]">{{
-                visibility.description
-              }}</span>
+            <AppDetailItem label="Visibility guidance" colSpan="full">
+              <span class="detail-item__hint">{{ visibility.description }}</span>
             </AppDetailItem>
           </AppDetailGrid>
         </AppDetailCard>
@@ -155,22 +139,22 @@ watch(publicationId, (nextId, previousId) => {
         <AppDetailCard title="Lifecycle Summary">
           <AppDetailGrid :columns="1">
             <AppDetailItem label="Issue date">
-              <span class="font-bold text-[var(--fcc-text)]">{{
+              <span class="detail-item__emphasis">{{
                 formatDisplayDate(publication?.issueDate, { dateOnly: true })
               }}</span>
             </AppDetailItem>
             <AppDetailItem label="Visible from">
-              <span class="font-bold text-[var(--fcc-text)]">{{
+              <span class="detail-item__emphasis">{{
                 formatDisplayDate(publication?.validFrom, { dateOnly: true })
               }}</span>
             </AppDetailItem>
             <AppDetailItem label="Visible until">
-              <span class="font-bold text-[var(--fcc-text)]">{{
+              <span class="detail-item__emphasis">{{
                 formatDisplayDate(publication?.validUntil, { dateOnly: true })
               }}</span>
             </AppDetailItem>
             <AppDetailItem label="Last updated">
-              <span class="font-bold text-[var(--fcc-text)]">{{
+              <span class="detail-item__emphasis">{{
                 formatDisplayDate(
                   publication?.lastModifiedAt || publication?.updatedAt || publication?.createdAt,
                 )

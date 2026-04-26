@@ -2,12 +2,9 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
-import AppFileUploadField from './AppFileUploadField.vue'
-import AppRepeatableListField from './AppRepeatableListField.vue'
-import AppTagInputField from './AppTagInputField.vue'
-import EntityRelationshipSelect from './EntityRelationshipSelect.vue'
+import AppSurfaceSection from '../common/AppSurfaceSection.vue'
+import EntitySchemaFields from './EntitySchemaFields.vue'
 import FormWizardLayout from './FormWizardLayout.vue'
-import SmartFormGrid from './SmartFormGrid.vue'
 
 const props = defineProps({
   title: { type: String, default: '' },
@@ -163,10 +160,6 @@ const isLastWizardStep = computed(() => {
   if (!shouldUseWizard.value) return true
   return currentStep.value >= wizardSteps.value.length - 1
 })
-
-function isFieldEmpty(fieldKey) {
-  return Boolean(emptyFields[fieldKey])
-}
 
 watch(
   () => props.modelValue,
@@ -345,283 +338,53 @@ function jumpToStep(stepIndex) {
     @jump="jumpToStep"
   >
     <el-form label-position="top" :disabled="loading" @submit.prevent="handleFormSubmit">
-      <div v-for="field in currentFields" :key="field.key" class="mb-4">
-        <el-alert
-          v-if="field.component === 'entity-select' && emptyFields[field.key]"
-          :title="`No ${field.label} available.`"
-          type="warning"
-          show-icon
-          :closable="false"
-          class="mb-2"
-        >
-          <template #default>
-            <div class="flex items-center justify-between">
-              <span>You must create at least one {{ field.label.toLowerCase() }} first.</span>
-              <el-button
-                v-if="field.createRoute"
-                type="warning"
-                size="small"
-                plain
-                @click="goToCreateForField(field.createRoute, field.key)"
-              >
-                Create {{ field.label }}
-              </el-button>
-            </div>
-          </template>
-        </el-alert>
-      </div>
-
-      <SmartFormGrid :fields="currentFields" :columns="columns">
-        <template #default="{ field }">
-          <el-form-item :label="field.label" :error="validationErrors[field.key]" class="mb-0">
-            <div
-              v-if="field.component === 'section'"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50 px-5 py-4"
-            >
-              <h3 class="text-base font-semibold text-slate-900">
-                {{ field.label }}
-              </h3>
-              <p v-if="field.description" class="mt-1 text-sm text-slate-500">
-                {{ field.description }}
-              </p>
-            </div>
-
-            <el-input
-              v-else-if="!field.component || field.component === 'input'"
-              :model-value="internalModel[field.key]"
-              :type="field.type || 'text'"
-              :placeholder="field.placeholder || ''"
-              :rows="field.rows || 3"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <el-input
-              v-else-if="field.component === 'textarea'"
-              :model-value="internalModel[field.key]"
-              type="textarea"
-              :placeholder="field.placeholder || ''"
-              :rows="field.rows || 4"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <EntityRelationshipSelect
-              v-else-if="field.component === 'entity-select'"
-              :model-value="internalModel[field.key]"
-              :field="field"
-              :model="internalModel"
-              :disabled="loading"
-              @update:model-value="updateFieldValue(field.key, $event)"
-              @empty="onFieldEmpty(field.key, $event)"
-            />
-
-            <AppTagInputField
-              v-else-if="field.component === 'tag-input'"
-              :model-value="internalModel[field.key]"
-              :placeholder="field.placeholder || 'Add tags and press Enter'"
-              :disabled="loading"
-              :max-collapse-tags="field.maxCollapseTags || 3"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <AppFileUploadField
-              v-else-if="field.component === 'file-upload'"
-              :model-value="internalModel[field.key]"
-              :field="field"
-              :disabled="loading"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <AppRepeatableListField
-              v-else-if="field.component === 'repeatable-list'"
-              :model-value="internalModel[field.key]"
-              :field="field"
-              :disabled="loading"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <el-select
-              v-else-if="field.component === 'select'"
-              :model-value="internalModel[field.key]"
-              :placeholder="field.placeholder || 'Select option'"
-              class="w-full"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            >
-              <el-option
-                v-for="option in field.options || []"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
-
-            <el-switch
-              v-else-if="field.component === 'switch'"
-              :model-value="Boolean(internalModel[field.key])"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <el-date-picker
-              v-else-if="field.component === 'date'"
-              :model-value="internalModel[field.key]"
-              type="date"
-              value-format="YYYY-MM-DD"
-              class="w-full"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <p v-if="field.helpText" class="mt-2 text-xs text-slate-500">
-              {{ field.helpText }}
-            </p>
-          </el-form-item>
-        </template>
-      </SmartFormGrid>
+      <EntitySchemaFields
+        :fields="currentFields"
+        :columns="columns"
+        :model="internalModel"
+        :loading="loading"
+        :validation-errors="validationErrors"
+        :empty-fields="emptyFields"
+        :required-resolver="isFieldRequired"
+        @update-field="updateFieldValue"
+        @field-empty="onFieldEmpty"
+        @create-related="goToCreateForField"
+      />
     </el-form>
   </FormWizardLayout>
 
-  <section v-else class="surface-card p-4 md:p-5">
-    <header class="mb-4">
-      <h2 class="section-title">{{ title }}</h2>
-      <p v-if="subtitle" class="mt-1 text-sm text-slate-600">{{ subtitle }}</p>
-    </header>
-
-    <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" class="mb-3" />
+  <AppSurfaceSection v-else :title="title" :subtitle="subtitle">
+    <el-alert
+      v-if="error"
+      :title="error"
+      type="error"
+      show-icon
+      :closable="false"
+      class="app-inline-alert app-inline-alert--compact"
+    />
 
     <el-form label-position="top" :disabled="loading" @submit.prevent="handleFormSubmit">
-      <SmartFormGrid :fields="visibleSchema" :columns="columns">
-        <template #default="{ field }">
-          <el-form-item :label="field.label" :error="validationErrors[field.key]" class="mb-0">
-            <el-alert
-              v-if="field.component === 'entity-select' && isFieldEmpty(field.key)"
-              :title="`No ${field.label} available.`"
-              type="warning"
-              show-icon
-              :closable="false"
-              class="mb-3"
-            >
-              <template #default>
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                  <span>
-                    You need to create at least one {{ field.label.toLowerCase() }} before you can
-                    continue.
-                  </span>
-                  <el-button
-                    v-if="field.createRoute"
-                    type="warning"
-                    plain
-                    @click="goToCreateForField(field.createRoute, field.key)"
-                  >
-                    Create {{ field.label }}
-                  </el-button>
-                </div>
-              </template>
-            </el-alert>
+      <EntitySchemaFields
+        :fields="visibleSchema"
+        :columns="columns"
+        :model="internalModel"
+        :loading="loading"
+        :validation-errors="validationErrors"
+        :empty-fields="emptyFields"
+        :required-resolver="isFieldRequired"
+        @update-field="updateFieldValue"
+        @field-empty="onFieldEmpty"
+        @create-related="goToCreateForField"
+      />
 
-            <div
-              v-if="field.component === 'section'"
-              class="w-full rounded-xl border border-slate-200 bg-slate-50 px-5 py-4"
-            >
-              <h3 class="text-base font-semibold text-slate-900">
-                {{ field.label }}
-              </h3>
-              <p v-if="field.description" class="mt-1 text-sm text-slate-500">
-                {{ field.description }}
-              </p>
-            </div>
-
-            <el-input
-              v-else-if="!field.component || field.component === 'input'"
-              :model-value="internalModel[field.key]"
-              :type="field.type || 'text'"
-              :placeholder="field.placeholder || ''"
-              :rows="field.rows || 3"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <el-input
-              v-else-if="field.component === 'textarea'"
-              :model-value="internalModel[field.key]"
-              type="textarea"
-              :placeholder="field.placeholder || ''"
-              :rows="field.rows || 4"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <EntityRelationshipSelect
-              v-else-if="field.component === 'entity-select'"
-              :model-value="internalModel[field.key]"
-              :field="field"
-              :model="internalModel"
-              :disabled="loading"
-              @update:model-value="updateFieldValue(field.key, $event)"
-              @empty="onFieldEmpty(field.key, $event)"
-            />
-
-            <AppTagInputField
-              v-else-if="field.component === 'tag-input'"
-              :model-value="internalModel[field.key]"
-              :placeholder="field.placeholder || 'Add tags and press Enter'"
-              :disabled="loading"
-              :max-collapse-tags="field.maxCollapseTags || 3"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <AppFileUploadField
-              v-else-if="field.component === 'file-upload'"
-              :model-value="internalModel[field.key]"
-              :field="field"
-              :disabled="loading"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <AppRepeatableListField
-              v-else-if="field.component === 'repeatable-list'"
-              :model-value="internalModel[field.key]"
-              :field="field"
-              :disabled="loading"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <el-select
-              v-else-if="field.component === 'select'"
-              :model-value="internalModel[field.key]"
-              :placeholder="field.placeholder || 'Select option'"
-              class="w-full"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            >
-              <el-option
-                v-for="option in field.options || []"
-                :key="option.value"
-                :label="option.label"
-                :value="option.value"
-              />
-            </el-select>
-
-            <el-switch
-              v-else-if="field.component === 'switch'"
-              :model-value="Boolean(internalModel[field.key])"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <el-date-picker
-              v-else-if="field.component === 'date'"
-              :model-value="internalModel[field.key]"
-              type="date"
-              value-format="YYYY-MM-DD"
-              class="w-full"
-              @update:model-value="updateFieldValue(field.key, $event)"
-            />
-
-            <p v-if="field.helpText" class="mt-2 text-xs text-slate-500">
-              {{ field.helpText }}
-            </p>
-          </el-form-item>
-        </template>
-      </SmartFormGrid>
-
-      <div class="mt-6 pt-5 border-t border-slate-100 flex flex-wrap justify-end gap-3">
-        <el-button v-if="showCancel" @click="$emit('cancel')">{{ cancelLabel }}</el-button>
-        <el-button type="primary" :loading="loading" @click="submit">{{ submitLabel }}</el-button>
+      <div class="entity-schema-form__actions">
+        <el-button v-if="showCancel" size="large" @click="$emit('cancel')">
+          {{ cancelLabel }}
+        </el-button>
+        <el-button size="large" type="primary" :loading="loading" @click="submit">
+          {{ submitLabel }}
+        </el-button>
       </div>
     </el-form>
-  </section>
+  </AppSurfaceSection>
 </template>

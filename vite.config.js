@@ -6,14 +6,15 @@ import tailwindcss from '@tailwindcss/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import vueDevTools from 'vite-plugin-vue-devtools'
+import { VitePWA } from 'vite-plugin-pwa'
 
-const cmsPort = 4173
+const cmsPort = 4174
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
   plugins: [
     vue(),
-    vueDevTools(),
+    mode !== 'production' && vueDevTools(),
     tailwindcss(),
     Components({
       dts: false,
@@ -24,7 +25,62 @@ export default defineConfig(({ mode }) => ({
         }),
       ],
     }),
-  ],
+    mode !== 'test' && VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      includeAssets: ['favicon.ico'],
+      manifest: {
+        name: 'FCC CMS',
+        short_name: 'FCC CMS',
+        description: 'Fair Competition Commission — Content Management System',
+        theme_color: '#1d4ed8',
+        background_color: '#ffffff',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
+        scope: '/',
+        icons: [
+          {
+            src: '/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: '/pwa-maskable-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+        ],
+      },
+      workbox: {
+        // The CMS is an authenticated dashboard; precaching JSON API
+        // responses is risky. Cache the app shell only and let API
+        // calls fall through to the network.
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api\//, /^\/content\//],
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) =>
+              ['style', 'script', 'worker', 'font', 'image'].includes(request.destination),
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'fcc-cms-assets' },
+          },
+        ],
+        cleanupOutdatedCaches: true,
+      },
+      devOptions: {
+        enabled: false,
+      },
+    }),
+  ].filter(Boolean),
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

@@ -12,41 +12,24 @@ defineProps({
 </script>
 
 <template>
-  <section
-    class="border shadow-sm overflow-hidden flex flex-col"
-    style="
-      background-color: var(--fcc-surface);
-      border-color: var(--fcc-border);
-      border-radius: var(--fcc-radius-lg);
-      box-shadow: var(--fcc-shadow-base);
-    "
-  >
+  <section class="enterprise-detail-card">
     <header
       v-if="title || subtitle || $slots['header-actions']"
-      class="px-5 py-4 border-b flex flex-wrap items-start justify-between gap-4"
-      style="border-color: var(--fcc-border); background-color: var(--fcc-surface-muted)"
+      class="enterprise-detail-card__header"
     >
-      <div class="min-w-0 flex-1">
-        <h3
-          v-if="title"
-          class="text-base font-semibold text-slate-900 dark:text-slate-100 leading-6"
-          style="color: var(--fcc-text)"
-        >
+      <div class="enterprise-detail-card__header-copy">
+        <h3 v-if="title">
           {{ title }}
         </h3>
-        <p
-          v-if="subtitle"
-          class="mt-1 text-sm text-slate-500 dark:text-slate-400"
-          style="color: var(--fcc-text-muted)"
-        >
+        <p v-if="subtitle">
           {{ subtitle }}
         </p>
       </div>
-      <div v-if="$slots['header-actions']" class="flex shrink-0 items-center gap-2">
+      <div v-if="$slots['header-actions']" class="enterprise-detail-card__actions">
         <slot name="header-actions" />
       </div>
     </header>
-    <div class="p-5">
+    <div class="enterprise-detail-card__body">
       <slot />
     </div>
   </section>

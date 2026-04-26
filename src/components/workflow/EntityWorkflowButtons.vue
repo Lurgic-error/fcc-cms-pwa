@@ -87,7 +87,7 @@ function onAction(key) {
       actions.map((action) => ({ ...action, group: 'workflow', danger: action.type === 'danger' }))
     "
     label="Workflow Actions"
-    size="small"
+    size="large"
     plain
     :disabled="disabled"
     @select="onAction($event.key)"

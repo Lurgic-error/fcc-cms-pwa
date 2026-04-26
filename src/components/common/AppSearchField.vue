@@ -26,24 +26,3 @@ const emit = defineEmits(['update:modelValue'])
     />
   </label>
 </template>
-
-<style scoped>
-.app-search-field {
-  display: grid;
-  gap: 0.45rem;
-  min-width: 0;
-}
-
-.app-search-field__label {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--fcc-text-muted);
-}
-
-.app-search-field :deep(.el-input__wrapper) {
-  border-radius: var(--fcc-radius-pill);
-  padding-inline: 1.25rem;
-}
-</style>

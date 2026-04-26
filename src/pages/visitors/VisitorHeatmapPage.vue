@@ -1,13 +1,15 @@
 <script setup>
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
-import AppDetailCard from '@/components/common/detail/AppDetailCard.vue'
-import AppDetailGrid from '@/components/common/detail/AppDetailGrid.vue'
-import AppDetailItem from '@/components/common/detail/AppDetailItem.vue'
-import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
+import AppFormRow from '@/components/forms/AppFormRow.vue'
+import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import { useVisitorsStore } from '@/stores/useVisitorsStore'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const visitorsStore = useVisitorsStore()
 const { hotspots, loading, error } = storeToRefs(visitorsStore)
 
@@ -20,6 +22,37 @@ const topPages = computed(() => hotspots.value.topPages || [])
 const topReferrers = computed(() => hotspots.value.topReferrers || [])
 const topLocales = computed(() => hotspots.value.topLocales || [])
 const recentActivity = computed(() => hotspots.value.recentActivity || [])
+const stats = computed(() => [
+  {
+    key: 'window',
+    label: 'Window',
+    value: hotspots.value.windowDays || filters.days,
+    helper: 'Days tracked in the current snapshot',
+  },
+  {
+    key: 'pages',
+    label: 'Top Paths',
+    value: topPages.value.length,
+    helper: 'Tracked routes with recorded visits',
+  },
+  {
+    key: 'referrers',
+    label: 'Referrers',
+    value: topReferrers.value.length,
+    helper: 'Known traffic sources in the window',
+  },
+  {
+    key: 'activity',
+    label: 'Recent Visits',
+    value: recentActivity.value.length,
+    helper:
+      formatDate(hotspots.value.generatedAt) === '-'
+        ? 'Waiting for analytics snapshot'
+        : `Generated ${formatDate(hotspots.value.generatedAt)}`,
+  },
+])
+
+const headerActions = Object.freeze([{ key: 'refresh', label: 'Refresh snapshot' }])
 
 function formatDate(value) {
   if (!value) return '-'
@@ -35,252 +68,134 @@ async function refresh() {
   })
 }
 
+async function goBack() {
+  await router.push({ name: 'visitors.list' })
+}
+
+async function onHeaderAction(action) {
+  if (action?.key === 'refresh') {
+    await refresh()
+  }
+}
+
 onMounted(refresh)
 </script>
 
 <template>
-  <PageWrapper
-    title="Visitor Hotspots"
-    description="Inspect the most visited paths, top referrers, locales, and recent tracked activity."
-  >
-    <div class="page space-y-6">
-      <section class="card controls">
-        <label>
-          Window (days)
-          <input v-model.number="filters.days" type="number" min="1" max="365" />
-        </label>
-        <label>
-          Rows
-          <input v-model.number="filters.limit" type="number" min="1" max="50" />
-        </label>
-        <button class="btn btn-primary" type="button" :disabled="loading" @click="refresh">
-          {{ loading ? 'Loading...' : 'Refresh' }}
-        </button>
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Visitor Analytics"
+        title="Visitor Hotspots"
+        description="Inspect the most visited paths, top referrers, locales, and recent tracked activity."
+        :actions="headerActions"
+        :loading="loading"
+        @select="onHeaderAction"
+        @back="goBack"
+      />
+    </template>
+
+    <div class="workspace-shell">
+      <OverviewStatsGrid :stats="stats" />
+
+      <WorkspacePanel eyebrow="Hotspot filters" title="Adjust the analytics snapshot">
+        <el-form label-position="top" class="workspace-form" @submit.prevent="refresh">
+          <AppFormRow :columns="2">
+            <el-form-item label="Window (days)" class="form-item-flush">
+              <el-input-number v-model="filters.days" :min="1" :max="365" />
+            </el-form-item>
+            <el-form-item label="Rows" class="form-item-flush">
+              <el-input-number v-model="filters.limit" :min="1" :max="50" />
+            </el-form-item>
+          </AppFormRow>
+        </el-form>
+
+        <el-alert v-if="error" type="error" show-icon :closable="false" :title="error" />
+      </WorkspacePanel>
+
+      <section class="workspace-grid">
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Top pages"
+          title="Most visited tracked paths"
+        >
+          <div class="workspace-table workspace-table--scroll">
+            <el-table
+              :data="topPages"
+              stripe
+              v-loading="loading"
+              empty-text="No page hotspots recorded for this window."
+            >
+              <el-table-column prop="path" label="Path" min-width="220" />
+              <el-table-column prop="views" label="Views" min-width="110" />
+              <el-table-column
+                prop="uniqueVisitors"
+                label="Unique Visitors"
+                min-width="150"
+              />
+              <el-table-column label="Last Visit" min-width="180">
+                <template #default="{ row }">
+                  {{ formatDate(row.lastVisitedAt) }}
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+        </WorkspacePanel>
+
+        <WorkspacePanel tag="article" eyebrow="Referrers" title="Traffic sources">
+          <div class="workspace-table workspace-table--scroll">
+            <el-table
+              :data="topReferrers"
+              stripe
+              v-loading="loading"
+              empty-text="No referrer data recorded for this window."
+            >
+              <el-table-column prop="referrer" label="Referrer" min-width="240" />
+              <el-table-column prop="visits" label="Visits" min-width="110" />
+            </el-table>
+          </div>
+        </WorkspacePanel>
       </section>
 
-      <AppDetailCard title="Heatmap Snapshot">
-        <AppDetailGrid columns="4">
-          <AppDetailItem label="Window">
-            <span class="font-bold text-lg text-slate-900 dark:text-white"
-              >{{ hotspots.windowDays || filters.days }} days</span
+      <section class="workspace-grid">
+        <WorkspacePanel tag="article" eyebrow="Locales" title="Language distribution">
+          <div class="workspace-table workspace-table--scroll">
+            <el-table
+              :data="topLocales"
+              stripe
+              v-loading="loading"
+              empty-text="No locale data recorded for this window."
             >
-          </AppDetailItem>
-          <AppDetailItem label="Top Paths">
-            <span class="font-bold text-lg text-slate-900 dark:text-white">{{
-              topPages.length
-            }}</span>
-          </AppDetailItem>
-          <AppDetailItem label="Top Referrers">
-            <span class="font-bold text-lg text-slate-900 dark:text-white">{{
-              topReferrers.length
-            }}</span>
-          </AppDetailItem>
-          <AppDetailItem label="Generated">
-            <span class="font-bold text-lg text-slate-900 dark:text-white">{{
-              formatDate(hotspots.generatedAt)
-            }}</span>
-          </AppDetailItem>
-        </AppDetailGrid>
-      </AppDetailCard>
-
-      <p v-if="error" class="error">{{ error }}</p>
-
-      <AppBentoGrid columns="2">
-        <article class="card">
-          <div class="section-header">
-            <h2>Top Pages</h2>
-            <span class="muted">Most visited tracked paths</span>
+              <el-table-column prop="locale" label="Locale" min-width="160" />
+              <el-table-column prop="visits" label="Visits" min-width="110" />
+            </el-table>
           </div>
-          <table v-if="topPages.length" class="table">
-            <thead>
-              <tr>
-                <th>Path</th>
-                <th>Views</th>
-                <th>Unique Visitors</th>
-                <th>Last Visit</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="page in topPages" :key="page.path">
-                <td>{{ page.path }}</td>
-                <td>{{ page.views }}</td>
-                <td>{{ page.uniqueVisitors }}</td>
-                <td>{{ formatDate(page.lastVisitedAt) }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-else class="muted">No page hotspots recorded for this window.</p>
-        </article>
+        </WorkspacePanel>
 
-        <article class="card">
-          <div class="section-header">
-            <h2>Referrers</h2>
-            <span class="muted">Traffic sources</span>
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Recent activity"
+          title="Latest tracked page visits"
+        >
+          <div class="workspace-table workspace-table--scroll">
+            <el-table
+              :data="recentActivity"
+              stripe
+              v-loading="loading"
+              empty-text="No recent activity recorded for this window."
+            >
+              <el-table-column prop="visitorId" label="Visitor" min-width="180" />
+              <el-table-column prop="path" label="Path" min-width="220" />
+              <el-table-column prop="locale" label="Locale" min-width="110" />
+              <el-table-column label="Visited" min-width="180">
+                <template #default="{ row }">
+                  {{ formatDate(row.visitedAt) }}
+                </template>
+              </el-table-column>
+            </el-table>
           </div>
-          <table v-if="topReferrers.length" class="table">
-            <thead>
-              <tr>
-                <th>Referrer</th>
-                <th>Visits</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="referrer in topReferrers" :key="referrer.referrer">
-                <td>{{ referrer.referrer }}</td>
-                <td>{{ referrer.visits }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-else class="muted">No referrer data recorded for this window.</p>
-        </article>
-      </AppBentoGrid>
-
-      <AppBentoGrid columns="2">
-        <article class="card">
-          <div class="section-header">
-            <h2>Locales</h2>
-            <span class="muted">Language distribution</span>
-          </div>
-          <table v-if="topLocales.length" class="table">
-            <thead>
-              <tr>
-                <th>Locale</th>
-                <th>Visits</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="locale in topLocales" :key="locale.locale">
-                <td>{{ locale.locale }}</td>
-                <td>{{ locale.visits }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-else class="muted">No locale data recorded for this window.</p>
-        </article>
-
-        <article class="card">
-          <div class="section-header">
-            <h2>Recent Activity</h2>
-            <span class="muted">Latest tracked page visits</span>
-          </div>
-          <table v-if="recentActivity.length" class="table">
-            <thead>
-              <tr>
-                <th>Visitor</th>
-                <th>Path</th>
-                <th>Locale</th>
-                <th>Visited</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="item in recentActivity"
-                :key="`${item.visitorId}:${item.visitedAt}:${item.path}`"
-              >
-                <td>{{ item.visitorId }}</td>
-                <td>{{ item.path || '-' }}</td>
-                <td>{{ item.locale || '-' }}</td>
-                <td>{{ formatDate(item.visitedAt) }}</td>
-              </tr>
-            </tbody>
-          </table>
-          <p v-else class="muted">No recent activity recorded for this window.</p>
-        </article>
-      </AppBentoGrid>
+        </WorkspacePanel>
+      </section>
     </div>
   </PageWrapper>
 </template>
-
-<style scoped>
-.page {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.controls {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-  align-items: end;
-}
-
-.card {
-  border: 1px solid var(--color-fcc-border);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  background: var(--color-surface);
-}
-
-.metric .label {
-  color: var(--color-fcc-text-muted);
-  font-size: 0.84rem;
-}
-
-.metric .value {
-  font-size: 1.3rem;
-  font-weight: 700;
-  color: var(--color-fcc-text);
-}
-
-.metric .value.small {
-  font-size: 0.95rem;
-}
-
-label {
-  display: grid;
-  gap: 0.3rem;
-  font-size: 0.9rem;
-}
-
-input {
-  border: 1px solid var(--color-secondary-300);
-  border-radius: 0.375rem;
-  padding: 0.45rem 0.55rem;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  align-items: center;
-  margin-bottom: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
-  border: 1px solid var(--color-fcc-border);
-  padding: 0.45rem;
-  font-size: 0.84rem;
-  text-align: left;
-  vertical-align: top;
-}
-
-.btn {
-  border: 1px solid var(--color-secondary-300);
-  border-radius: 0.375rem;
-  padding: 0.45rem 0.8rem;
-  cursor: pointer;
-}
-
-.btn-primary {
-  border-color: var(--color-primary-600);
-  background: var(--color-primary-600);
-  color: var(--color-surface);
-}
-
-.muted {
-  color: var(--color-fcc-text-muted);
-  font-size: 0.84rem;
-}
-
-.error {
-  color: var(--color-danger);
-}
-</style>

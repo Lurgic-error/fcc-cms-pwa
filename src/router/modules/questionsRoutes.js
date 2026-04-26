@@ -39,7 +39,7 @@ export default [
         component: () => import('@/pages/questions/QuestionCreatePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.CREATE]),
-          roles: [ROLES.EDITOR, ROLES.ADMIN],
+          roles: [ROLES.EDITOR, ROLES.PUBLISHER],
           type: 'create',
           breadcrumb: { label: 'Create', i18nKey: 'breadcrumbs.create' },
         },
@@ -50,7 +50,7 @@ export default [
         component: () => import('@/pages/questions/QuestionReviewQueuePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.REVIEW]),
-          roles: [ROLES.REVIEWER, ROLES.ADMIN],
+          roles: [ROLES.REVIEWER, ROLES.PUBLISHER],
           type: 'review',
           breadcrumb: {
             label: 'Review Queue',

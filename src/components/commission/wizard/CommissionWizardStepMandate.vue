@@ -2,8 +2,9 @@
 import { computed, ref } from 'vue'
 
 import AppFormRow from '@/components/forms/AppFormRow.vue'
+import AppRepeatableListField from '@/components/forms/AppRepeatableListField.vue'
 
-import CommissionWizardSectionCard from './CommissionWizardSectionCard.vue'
+import AppSurfaceSection from '@/components/common/AppSurfaceSection.vue'
 
 const props = defineProps({
   form: { type: Object, required: true },
@@ -12,17 +13,57 @@ const props = defineProps({
 const formRef = ref(null)
 const model = computed(() => props.form)
 
+const mandateItemsField = Object.freeze({
+  itemTitle: 'mandate item',
+  addLabel: 'Add Mandate Item',
+  itemDescription: 'Each mandate item should carry the same meaning in English and Swahili.',
+  emptyDescription: 'No mandate items added yet.',
+  itemSchema: [
+    {
+      key: 'en',
+      label: 'Mandate Item (English)',
+      component: 'textarea',
+      rows: 3,
+      required: true,
+      placeholder: 'Describe the mandate item in English.',
+    },
+    {
+      key: 'sw',
+      label: 'Mandate Item (Swahili)',
+      component: 'textarea',
+      rows: 3,
+      required: true,
+      placeholder: 'Andika kipengele cha mandate kwa Kiswahili.',
+    },
+  ],
+})
+
 function requiredRule(message) {
   return [{ required: true, message, trigger: 'blur' }]
 }
 
-function addMandateItem() {
-  model.value.mandate.items.push({ en: '', sw: '' })
+function hasText(value) {
+  return Boolean(String(value || '').trim())
 }
 
-function removeMandateItem(index) {
-  if (model.value.mandate.items.length === 1) return
-  model.value.mandate.items.splice(index, 1)
+function hasLocalizedItems(items = []) {
+  return Array.isArray(items) && items.some((item) => hasText(item?.en) && hasText(item?.sw))
+}
+
+function requiredItemsRule(message, predicate) {
+  return [
+    {
+      validator: (_rule, value, callback) => {
+        if (predicate(value)) {
+          callback()
+          return
+        }
+
+        callback(new Error(message))
+      },
+      trigger: 'change',
+    },
+  ]
 }
 
 async function validate() {
@@ -42,7 +83,7 @@ defineExpose({ validate })
 <template>
   <el-form ref="formRef" :model="model" label-position="top" scroll-to-error>
     <div class="commission-step-grid">
-      <CommissionWizardSectionCard
+      <AppSurfaceSection class="commission-wizard-section" title-tag="h3"
         title="Mandate overview"
         description="Start with a short bilingual explanation of the commission mandate before listing specific mandate items."
       >
@@ -51,7 +92,7 @@ defineExpose({ validate })
             label="Mandate Description (English)"
             prop="mandate.description.en"
             :rules="requiredRule('Enter the mandate description in English.')"
-            class="md:col-span-2"
+            class="app-form-row__item--full"
           >
             <el-input
               v-model="model.mandate.description.en"
@@ -65,7 +106,7 @@ defineExpose({ validate })
             label="Mandate Description (Swahili)"
             prop="mandate.description.sw"
             :rules="requiredRule('Enter the mandate description in Swahili.')"
-            class="md:col-span-2"
+            class="app-form-row__item--full"
           >
             <el-input
               v-model="model.mandate.description.sw"
@@ -75,106 +116,25 @@ defineExpose({ validate })
             />
           </el-form-item>
         </AppFormRow>
-      </CommissionWizardSectionCard>
+      </AppSurfaceSection>
 
-      <CommissionWizardSectionCard
+      <AppSurfaceSection class="commission-wizard-section" title-tag="h3"
         title="Mandate items"
         description="Add the detailed mandate points as a repeatable bilingual list."
       >
-        <div class="commission-step-list-header">
-          <div>
-            <h4>Mandate list</h4>
-            <p>Each mandate item should carry the same meaning in English and Swahili.</p>
-          </div>
-          <el-button type="primary" plain @click="addMandateItem">Add Mandate Item</el-button>
-        </div>
-
-        <div class="commission-step-stack">
-          <CommissionWizardSectionCard
-            v-for="(item, index) in model.mandate.items"
-            :key="`mandate-item-${index}`"
-            compact
-          >
-            <template #header>
-              <div class="commission-step-item-header">
-                <div>
-                  <h4>Mandate item {{ index + 1 }}</h4>
-                  <p>Use one clear mandate statement per card.</p>
-                </div>
-                <el-button text type="danger" @click="removeMandateItem(index)">Remove</el-button>
-              </div>
-            </template>
-
-            <AppFormRow :columns="2">
-              <el-form-item
-                :label="`Mandate Item ${index + 1} (English)`"
-                :prop="`mandate.items.${index}.en`"
-                :rules="requiredRule('Enter the English mandate item.')"
-              >
-                <el-input
-                  v-model="item.en"
-                  type="textarea"
-                  :rows="3"
-                  placeholder="Describe the mandate item in English."
-                />
-              </el-form-item>
-
-              <el-form-item
-                :label="`Mandate Item ${index + 1} (Swahili)`"
-                :prop="`mandate.items.${index}.sw`"
-                :rules="requiredRule('Enter the Swahili mandate item.')"
-              >
-                <el-input
-                  v-model="item.sw"
-                  type="textarea"
-                  :rows="3"
-                  placeholder="Andika kipengele cha mandate kwa Kiswahili."
-                />
-              </el-form-item>
-            </AppFormRow>
-          </CommissionWizardSectionCard>
-        </div>
-      </CommissionWizardSectionCard>
+        <el-form-item
+          prop="mandate.items"
+          :rules="
+            requiredItemsRule(
+              'Add at least one complete mandate item in both languages.',
+              hasLocalizedItems,
+            )
+          "
+          class="form-item-flush"
+        >
+          <AppRepeatableListField v-model="model.mandate.items" :field="mandateItemsField" />
+        </el-form-item>
+      </AppSurfaceSection>
     </div>
   </el-form>
 </template>
-
-<style scoped>
-.commission-step-grid,
-.commission-step-stack {
-  display: grid;
-  gap: 1rem;
-}
-
-.commission-step-list-header,
-.commission-step-item-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.commission-step-list-header h4,
-.commission-step-item-header h4 {
-  margin: 0;
-  font-size: 0.94rem;
-  font-weight: 700;
-  color: rgb(15 23 42);
-}
-
-.commission-step-list-header p,
-.commission-step-item-header p {
-  margin: 0.25rem 0 0;
-  font-size: 0.86rem;
-  line-height: 1.55;
-  color: rgb(71 85 105);
-}
-
-@media (max-width: 767px) {
-  .commission-step-list-header,
-  .commission-step-item-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-}
-</style>

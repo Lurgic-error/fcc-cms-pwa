@@ -1,12 +1,18 @@
 <script setup>
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
-import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
+import AppFormRow from '@/components/forms/AppFormRow.vue'
+import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import EntityWorkflowButtons from '@/components/workflow/EntityWorkflowButtons.vue'
 import { useBlockTypesStore } from '@/stores/useBlockTypesStore'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const blockTypesStore = useBlockTypesStore()
 const { entities: blockTypes, loading, error, pagination } = storeToRefs(blockTypesStore)
 
@@ -29,12 +35,44 @@ const selected = computed(() =>
   blockTypes.value.find((item) => item.blockTypeId === selectedId.value),
 )
 
+const stats = computed(() => [
+  { key: 'total', label: 'Block Types', value: blockTypes.value.length },
+  {
+    key: 'active',
+    label: 'Active',
+    value: blockTypes.value.filter((item) => item?.isActive !== false).length,
+  },
+  {
+    key: 'reusable',
+    label: 'Reusable',
+    value: blockTypes.value.filter((item) => item?.isReusable !== false).length,
+  },
+  {
+    key: 'published',
+    label: 'Published',
+    value: blockTypes.value.filter((item) => resolveStatus(item) === 'published').length,
+  },
+])
+
+const headerActions = Object.freeze([
+  { key: 'refresh', label: 'Refresh workspace' },
+  { key: 'create', label: 'New block type' },
+])
+
 function parseJson(text, fallback = {}) {
   try {
     return JSON.parse(text || '{}')
   } catch {
     return fallback
   }
+}
+
+function resolveStatus(item = {}) {
+  return item?.effectiveStatus || item?.publicationStatus || 'draft'
+}
+
+function countSchemaFields(item = {}) {
+  return Array.isArray(item?.schema?.fields) ? item.schema.fields.length : 0
 }
 
 function loadForm(item) {
@@ -48,8 +86,11 @@ function loadForm(item) {
   form.isActive = item?.isActive !== false
 }
 
-function clearForm() {
+function clearForm({ preserveFeedback = false } = {}) {
   selectedId.value = ''
+  if (!preserveFeedback) {
+    feedback.value = ''
+  }
   loadForm(null)
 }
 
@@ -96,8 +137,9 @@ async function save() {
     await blockTypesStore.create(payload, false)
     feedback.value = 'Block type created.'
   }
+
   await refresh()
-  clearForm()
+  clearForm({ preserveFeedback: true })
 }
 
 async function runWorkflow(action) {
@@ -119,188 +161,199 @@ async function runWorkflow(action) {
   await refresh()
 }
 
+async function goBack() {
+  await router.push({ name: 'contentManagement.overview' })
+}
+
+async function onHeaderAction(action) {
+  if (action?.key === 'refresh') {
+    await refresh()
+    return
+  }
+
+  if (action?.key === 'create') {
+    clearForm()
+  }
+}
+
 onMounted(refresh)
 </script>
 
 <template>
-  <PageWrapper class="page">
-    <div class="toolbar">
-      <h1>Block Types</h1>
-      <div class="toolbar-actions">
-        <button class="btn btn-muted" type="button" @click="refresh">Refresh</button>
-        <button class="btn btn-muted" type="button" @click="clearForm">New</button>
-      </div>
-    </div>
-
-    <AppBentoGrid columns="2">
-      <section class="card">
-        <h2>{{ selectedId ? 'Edit Block Type' : 'Create Block Type' }}</h2>
-        <form class="form" @submit.prevent="save">
-          <label>Key <input v-model="form.key" type="text" required /></label>
-          <label>Label <input v-model="form.label" type="text" required /></label>
-          <label>Description <input v-model="form.description" type="text" /></label>
-          <label>Allowed Media <input v-model="form.allowedMediaCsv" type="text" /></label>
-          <label>Schema (JSON) <textarea v-model="form.schemaText" rows="7" /></label>
-          <label>UI (JSON) <textarea v-model="form.uiText" rows="5" /></label>
-          <div class="checkboxes">
-            <label><input v-model="form.isReusable" type="checkbox" /> Reusable</label>
-            <label><input v-model="form.isActive" type="checkbox" /> Active</label>
-          </div>
-          <button class="btn btn-primary" type="submit" :disabled="loading">
-            {{ loading ? 'Saving...' : selectedId ? 'Update' : 'Create' }}
-          </button>
-          <p v-if="feedback" class="feedback">{{ feedback }}</p>
-          <p v-if="error" class="error">{{ error }}</p>
-        </form>
-      </section>
-
-      <section class="card">
-        <h2>Registered Block Types</h2>
-        <p v-if="loading">Loading block types...</p>
-        <p v-else-if="!blockTypes.length">No block types found.</p>
-        <table v-else class="table">
-          <thead>
-            <tr>
-              <th>Key</th>
-              <th>Label</th>
-              <th>Reusable</th>
-              <th>Active</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in blockTypes"
-              :key="item.blockTypeId"
-              :class="{ selected: item.blockTypeId === selectedId }"
-              @click="selectBlockType(item)"
-            >
-              <td>{{ item.key }}</td>
-              <td>{{ item.label }}</td>
-              <td>{{ item.isReusable ? 'Yes' : 'No' }}</td>
-              <td>{{ item.isActive ? 'Yes' : 'No' }}</td>
-              <td>{{ item.publicationStatus || 'draft' }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <TablePagination
-          v-if="blockTypes.length"
-          :pagination="pagination"
-          :loading="loading"
-          @update:page="setPage"
-          @update:limit="setLimit"
-        />
-      </section>
-    </AppBentoGrid>
-
-    <section class="card">
-      <h2>Workflow Actions</h2>
-      <EntityWorkflowButtons
-        :disabled="!selected"
-        @submit="runWorkflow('submit')"
-        @approve="runWorkflow('approve')"
-        @reject="runWorkflow('reject')"
-        @publish="runWorkflow('publish')"
-        @unpublish="runWorkflow('unpublish')"
-        @archive="runWorkflow('archive')"
-        @restore="runWorkflow('restore')"
-        @restore-archived="runWorkflow('restoreArchived')"
-        @soft-delete="runWorkflow('softDelete')"
-        @delete="runWorkflow('delete')"
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Content Workspace"
+        title="Block Types"
+        description="Define reusable content blueprints, editor field schema, and media behavior in one structured workspace."
+        :actions="headerActions"
+        :loading="loading"
+        @select="onHeaderAction"
+        @back="goBack"
       />
-    </section>
+    </template>
+
+    <div class="workspace-shell">
+      <OverviewStatsGrid :stats="stats" />
+
+      <section class="workspace-grid">
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Schema editor"
+          :title="selectedId ? 'Update this block type' : 'Create a new block type'"
+        >
+          <el-form label-position="top" class="workspace-form" @submit.prevent="save">
+            <AppFormRow :columns="2">
+              <el-form-item label="Key" required class="form-item-flush">
+                <el-input v-model="form.key" />
+              </el-form-item>
+              <el-form-item label="Label" required class="form-item-flush">
+                <el-input v-model="form.label" />
+              </el-form-item>
+              <el-form-item label="Description" class="form-item-flush">
+                <el-input v-model="form.description" />
+              </el-form-item>
+              <el-form-item label="Allowed Media" class="form-item-flush">
+                <el-input v-model="form.allowedMediaCsv" placeholder="image, video, document" />
+              </el-form-item>
+            </AppFormRow>
+
+            <el-form-item label="Schema (JSON)" class="form-item-flush">
+              <el-input v-model="form.schemaText" type="textarea" :rows="8" />
+            </el-form-item>
+
+            <el-form-item label="UI (JSON)" class="form-item-flush">
+              <el-input v-model="form.uiText" type="textarea" :rows="6" />
+            </el-form-item>
+
+            <div class="workspace-toggle-row">
+              <el-checkbox v-model="form.isReusable">Reusable</el-checkbox>
+              <el-checkbox v-model="form.isActive">Active</el-checkbox>
+            </div>
+
+            <div class="workspace-form__actions">
+              <el-button size="large" plain @click="clearForm">Clear</el-button>
+              <el-button size="large" type="primary" native-type="submit" :loading="loading">
+                {{ selectedId ? 'Save block type' : 'Create block type' }}
+              </el-button>
+            </div>
+
+            <el-alert
+              v-if="feedback"
+              type="success"
+              show-icon
+              :closable="false"
+              :title="feedback"
+            />
+            <el-alert v-if="error" type="error" show-icon :closable="false" :title="error" />
+          </el-form>
+        </WorkspacePanel>
+
+        <WorkspacePanel tag="article" eyebrow="Block library" title="Browse registered block types">
+          <template #aside>
+            <StatusBadge v-if="selected" :value="resolveStatus(selected)" />
+          </template>
+          <div class="workspace-table workspace-table--scroll">
+            <el-table
+              :data="blockTypes"
+              row-key="blockTypeId"
+              stripe
+              highlight-current-row
+              :current-row-key="selectedId"
+              v-loading="loading"
+              @row-click="selectBlockType"
+            >
+              <el-table-column prop="key" label="Key" min-width="180" />
+              <el-table-column prop="label" label="Label" min-width="180" />
+              <el-table-column label="Reusable" min-width="120">
+                <template #default="{ row }">
+                  <el-tag :type="row.isReusable ? 'success' : 'info'" effect="plain">
+                    {{ row.isReusable ? 'Reusable' : 'Single use' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="Active" min-width="120">
+                <template #default="{ row }">
+                  <el-tag :type="row.isActive ? 'success' : 'info'" effect="plain">
+                    {{ row.isActive ? 'Active' : 'Inactive' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="Status" min-width="140">
+                <template #default="{ row }">
+                  <StatusBadge :value="resolveStatus(row)" />
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <TablePagination
+            v-if="blockTypes.length"
+            :pagination="pagination"
+            :loading="loading"
+            @update:page="setPage"
+            @update:limit="setLimit"
+          />
+        </WorkspacePanel>
+      </section>
+
+      <section class="workspace-grid workspace-grid--bottom">
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Selected block type"
+          :title="selected?.label || 'Choose a block type from the library'"
+        >
+          <template #aside>
+            <StatusBadge v-if="selected" :value="resolveStatus(selected)" />
+          </template>
+          <div v-if="selected" class="workspace-summary">
+            <div class="workspace-summary__row">
+              <span>Key</span>
+              <strong>{{ selected.key }}</strong>
+            </div>
+            <div class="workspace-summary__row">
+              <span>Allowed media</span>
+              <strong>{{
+                Array.isArray(selected.allowedMedia) && selected.allowedMedia.length
+                  ? selected.allowedMedia.join(', ')
+                  : 'Not specified'
+              }}</strong>
+            </div>
+            <div class="workspace-summary__row">
+              <span>Schema fields</span>
+              <strong>{{ countSchemaFields(selected) }}</strong>
+            </div>
+            <div class="workspace-summary__row">
+              <span>Editor mode</span>
+              <strong>{{ selected.isReusable ? 'Reusable' : 'Single use' }}</strong>
+            </div>
+          </div>
+
+          <p v-else class="workspace-empty">
+            Select a block type to review how editors can reuse it and what media it allows.
+          </p>
+        </WorkspacePanel>
+
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Workflow"
+          title="Submit, approve, archive, or restore"
+        >
+          <EntityWorkflowButtons
+            :disabled="!selected"
+            @submit="runWorkflow('submit')"
+            @approve="runWorkflow('approve')"
+            @reject="runWorkflow('reject')"
+            @publish="runWorkflow('publish')"
+            @unpublish="runWorkflow('unpublish')"
+            @archive="runWorkflow('archive')"
+            @restore="runWorkflow('restore')"
+            @restore-archived="runWorkflow('restoreArchived')"
+            @soft-delete="runWorkflow('softDelete')"
+            @delete="runWorkflow('delete')"
+          />
+        </WorkspacePanel>
+      </section>
+    </div>
   </PageWrapper>
 </template>
-
-<style scoped>
-.page {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.toolbar-actions,
-.checkboxes {
-  display: flex;
-  gap: 0.6rem;
-  flex-wrap: wrap;
-}
-
-.card {
-  border: 1px solid var(--color-fcc-border);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  background: var(--color-surface);
-}
-
-.form {
-  display: grid;
-  gap: 0.6rem;
-}
-
-label {
-  display: grid;
-  gap: 0.3rem;
-  font-size: 0.9rem;
-}
-
-input,
-textarea {
-  border: 1px solid var(--color-secondary-300);
-  border-radius: 0.375rem;
-  padding: 0.45rem 0.55rem;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
-  border: 1px solid var(--color-fcc-border);
-  padding: 0.45rem;
-  text-align: left;
-  font-size: 0.86rem;
-}
-
-.table tbody tr {
-  cursor: pointer;
-}
-
-.table tbody tr.selected {
-  background: var(--color-secondary-50);
-}
-
-.btn {
-  border: 1px solid var(--color-secondary-300);
-  border-radius: 0.375rem;
-  padding: 0.45rem 0.7rem;
-  background: var(--color-surface);
-  cursor: pointer;
-}
-
-.btn-primary {
-  border-color: var(--color-primary-600);
-  background: var(--color-primary-600);
-  color: var(--color-surface);
-}
-
-.btn-muted {
-  background: var(--color-surface-muted);
-}
-
-.feedback {
-  color: var(--color-primary-600);
-}
-
-.error {
-  color: var(--color-danger);
-}
-</style>

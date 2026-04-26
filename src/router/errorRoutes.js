@@ -13,6 +13,17 @@ export default [
     ],
   },
   {
+    path: '/server-error',
+    component: ErrorLayout,
+    children: [
+      {
+        path: '',
+        name: 'serverError',
+        component: () => import('@/pages/errors/ServerErrorPage.vue'),
+      },
+    ],
+  },
+  {
     path: '/:pathMatch(.*)*',
     component: ErrorLayout,
     children: [

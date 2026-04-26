@@ -6,9 +6,9 @@ export const ROUTE_NAMES = Object.freeze({
 })
 
 export const ROLES = Object.freeze({
-  ADMIN: 'admin',
-  EDITOR: 'editor',
+  AUTHOR: 'author',
   REVIEWER: 'reviewer',
+  EDITOR: 'editor',
   PUBLISHER: 'publisher',
 })
 

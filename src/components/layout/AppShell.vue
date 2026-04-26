@@ -22,12 +22,6 @@ const navigationSections = computed(() =>
   }),
 )
 
-const shellStyle = computed(() => ({
-  '--shell-sidebar-width': '288px',
-  '--shell-header-height': '64px',
-  '--shell-footer-height': '48px',
-}))
-
 function syncViewport() {
   const desktop = window.innerWidth >= MOBILE_BREAKPOINT
   isDesktop.value = desktop
@@ -69,11 +63,11 @@ watch(
 </script>
 
 <template>
-  <div class="app-shell" :style="shellStyle">
+  <div class="app-shell">
     <transition name="app-shell-backdrop">
-      <button
+      <el-button
         v-if="!isDesktop && isSidebarOpen"
-        type="button"
+        text
         class="app-shell__backdrop"
         aria-label="Close navigation"
         @click="closeSidebar"
@@ -107,100 +101,3 @@ watch(
     </div>
   </div>
 </template>
-
-<style scoped>
-.app-shell {
-  height: 100dvh;
-  overflow: hidden;
-  background: var(--fcc-app-bg);
-}
-
-.app-shell__sidebar {
-  position: fixed;
-  inset: 0 auto 0 0;
-  z-index: 50;
-  width: var(--shell-sidebar-width);
-  background: var(--fcc-sidebar-bg);
-  transform: translateX(0);
-}
-
-.app-shell__header {
-  position: fixed;
-  top: 0;
-  left: var(--shell-sidebar-width);
-  right: 0;
-  height: var(--shell-header-height);
-  z-index: 40;
-}
-
-.app-shell__footer {
-  position: fixed;
-  left: var(--shell-sidebar-width);
-  right: 0;
-  bottom: 0;
-  height: var(--shell-footer-height);
-  z-index: 40;
-}
-
-.app-shell__content {
-  position: fixed;
-  top: var(--shell-header-height);
-  right: 0;
-  bottom: var(--shell-footer-height);
-  left: var(--shell-sidebar-width);
-  overflow-y: auto;
-  padding: 2rem;
-}
-
-.app-shell__backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 45;
-  border: 0;
-  background: rgba(2, 6, 23, 0.56);
-}
-
-.app-shell-page-enter-active,
-.app-shell-page-leave-active {
-  transition:
-    opacity 0.16s ease,
-    transform 0.16s ease;
-}
-
-.app-shell-page-enter-from,
-.app-shell-page-leave-to {
-  opacity: 0;
-  transform: translateY(6px);
-}
-
-.app-shell-backdrop-enter-active,
-.app-shell-backdrop-leave-active {
-  transition: opacity 0.18s ease;
-}
-
-.app-shell-backdrop-enter-from,
-.app-shell-backdrop-leave-to {
-  opacity: 0;
-}
-
-@media (max-width: 1023px) {
-  .app-shell__sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.22s ease;
-  }
-
-  .app-shell__sidebar.is-open {
-    transform: translateX(0);
-  }
-
-  .app-shell__header,
-  .app-shell__footer,
-  .app-shell__content {
-    left: 0;
-  }
-
-  .app-shell__content {
-    padding: 1rem;
-  }
-}
-</style>

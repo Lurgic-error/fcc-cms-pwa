@@ -1,4 +1,6 @@
 import axios from 'axios'
+import { getActivePinia } from 'pinia'
+import { useUsersStore } from '@/stores/useUsersStore'
 import {
   clearPersistedSession,
   getPersistedAccessToken,
@@ -39,6 +41,31 @@ async function refreshAccessToken(baseURL) {
   return data.accessToken
 }
 
+let refreshPromise = null
+
+async function getNewToken(baseURL) {
+  if (!refreshPromise) {
+    refreshPromise = refreshAccessToken(baseURL).finally(() => {
+      refreshPromise = null
+    })
+  }
+  return refreshPromise
+}
+
+function clearClientSession() {
+  try {
+    const pinia = getActivePinia()
+    if (pinia) {
+      useUsersStore(pinia).clearSession()
+      return
+    }
+  } catch {
+    // Fall back to clearing persisted storage only when Pinia is unavailable.
+  }
+
+  clearPersistedSession()
+}
+
 export function registerInterceptors(instance) {
   instance.interceptors.request.use(
     (config) => {
@@ -49,7 +76,6 @@ export function registerInterceptors(instance) {
 
       config.headers = config.headers || {}
       config.headers.Authorization = `Bearer ${token}`
-      config.headers['x-access-token'] = token
       return config
     },
     (error) => Promise.reject(error),
@@ -73,13 +99,12 @@ export function registerInterceptors(instance) {
       originalRequest.__retried = true
 
       try {
-        const nextToken = await refreshAccessToken(instance.defaults.baseURL)
+        const nextToken = await getNewToken(instance.defaults.baseURL)
         originalRequest.headers = originalRequest.headers || {}
         originalRequest.headers.Authorization = `Bearer ${nextToken}`
-        originalRequest.headers['x-access-token'] = nextToken
         return instance(originalRequest)
       } catch (refreshError) {
-        clearPersistedSession()
+        clearClientSession()
         return Promise.reject(refreshError)
       }
     },

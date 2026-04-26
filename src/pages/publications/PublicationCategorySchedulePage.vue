@@ -1,10 +1,13 @@
 <script setup>
-import { schedulerAPI } from '@/api'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { schedulerAPI } from '@/api'
+import EntityScheduleWorkspace from '@/components/enterprise/EntityScheduleWorkspace.vue'
+import AppFormRow from '@/components/forms/AppFormRow.vue'
 import { usePublicationCategoriesStore } from '@/stores/publications/usePublicationCategoriesStore'
 import { getEffectiveWorkflowStatus, withWorkflowState } from '@/utils/contentWorkflow'
+import { extractErrorMessage } from '@/utils/httpError'
 import { resolveLocalizedLabel } from '@/utils/publicationsWorkspace'
 
 const route = useRoute()
@@ -22,6 +25,11 @@ const errorMessage = ref('')
 const category = ref(null)
 const schedules = ref([])
 
+const headerActions = Object.freeze([
+  { key: 'refreshSchedules', label: 'Refresh schedules', group: 'workspace' },
+  { key: 'viewDetails', label: 'View details', group: 'navigation' },
+])
+
 const form = reactive({
   action: 'publish',
   runAt: null,
@@ -29,46 +37,14 @@ const form = reactive({
 })
 
 const categoryTitle = computed(() => resolveLocalizedLabel(category.value, 'Untitled category'))
-
 const categoryStatus = computed(() => getEffectiveWorkflowStatus(category.value))
-
-const statusTagType = computed(() => {
-  const status = String(categoryStatus.value || '').toLowerCase()
-  if (status === 'published') return 'success'
-  if (status === 'approved') return 'info'
-  if (status === 'scheduled') return 'warning'
-  if (status === 'unpublished') return 'danger'
-  return ''
-})
 
 const canSchedulePublish = computed(() => {
   const status = categoryStatus.value
   return status === 'approved' || status === 'unpublished'
 })
 
-const canScheduleUnpublish = computed(() => {
-  return categoryStatus.value === 'published'
-})
-
-function formatDate(value) {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '-'
-  return date.toLocaleString()
-}
-
-function mapScheduleAction(jobName) {
-  return jobName === 'unpublishContent' ? 'Unpublish' : 'Publish'
-}
-
-function getScheduleStatusType(status = '') {
-  const value = String(status || '').toLowerCase()
-  if (value === 'active') return 'success'
-  if (value === 'paused') return 'warning'
-  if (value === 'cancelled') return 'danger'
-  if (value === 'completed') return 'info'
-  return ''
-}
+const canScheduleUnpublish = computed(() => categoryStatus.value === 'published')
 
 async function loadCategory() {
   if (!categoryId.value) return
@@ -78,7 +54,7 @@ async function loadCategory() {
   try {
     category.value = withWorkflowState(await categoriesStore.findCategory(categoryId.value))
   } catch (err) {
-    errorMessage.value = err?.response?.data?.error || err?.message || 'Failed to load category.'
+    errorMessage.value = extractErrorMessage(err, 'Failed to load category.')
   } finally {
     loadingRecord.value = false
   }
@@ -87,6 +63,7 @@ async function loadCategory() {
 async function loadSchedules() {
   if (!categoryId.value) return
   loadingSchedules.value = true
+  errorMessage.value = ''
 
   const response = await schedulerAPI.listSchedules({
     contentType: 'publicationCategories',
@@ -97,10 +74,7 @@ async function loadSchedules() {
   loadingSchedules.value = false
 
   if (response?.error) {
-    errorMessage.value =
-      response.error?.response?.data?.error ||
-      response.error?.message ||
-      'Failed to load schedules.'
+    errorMessage.value = extractErrorMessage(response.error, 'Failed to load schedules.')
     return
   }
 
@@ -148,17 +122,16 @@ async function scheduleAction() {
       })
     }
   } catch (err) {
-    errorMessage.value = err?.response?.data?.error || err?.message || 'Scheduling failed.'
-    submitting.value = false
+    errorMessage.value = extractErrorMessage(err, 'Scheduling failed.')
     return
+  } finally {
+    submitting.value = false
   }
-
-  submitting.value = false
 
   await Promise.all([loadCategory(), loadSchedules()])
 }
 
-async function runScheduleAction(scheduleId, action) {
+async function runScheduleAction({ scheduleId, action }) {
   actionLoadingId.value = `${scheduleId}:${action}`
   errorMessage.value = ''
 
@@ -171,14 +144,29 @@ async function runScheduleAction(scheduleId, action) {
   actionLoadingId.value = ''
 
   if (response?.error) {
-    errorMessage.value =
-      response.error?.response?.data?.error ||
-      response.error?.message ||
-      `Failed to ${action} schedule.`
+    errorMessage.value = extractErrorMessage(response.error, `Failed to ${action} schedule.`)
     return
   }
 
   await Promise.all([loadCategory(), loadSchedules()])
+}
+
+async function onHeaderAction(action) {
+  if (action?.key === 'refreshSchedules') {
+    await Promise.all([loadCategory(), loadSchedules()])
+    return
+  }
+
+  if (action?.key === 'viewDetails' && categoryId.value) {
+    await router.push({
+      name: 'publicationCategories.details',
+      params: { categoryId: categoryId.value },
+    })
+  }
+}
+
+async function goBack() {
+  await router.push({ name: 'publicationCategories.list' })
 }
 
 onMounted(async () => {
@@ -187,47 +175,28 @@ onMounted(async () => {
 </script>
 
 <template>
-  <page-wrapper
+  <EntityScheduleWorkspace
     title="Schedule Category"
     description="Plan publish and unpublish times for this publication category."
+    :header-actions="headerActions"
+    :loading-header="loadingRecord || loadingSchedules || submitting"
+    back-label="Back to list"
+    :error="errorMessage"
+    :loading-record="loadingRecord"
+    :loading-schedules="loadingSchedules"
+    record-title="Selected category"
+    record-description="Scheduling is configured against this category record."
+    :record-status="categoryStatus"
+    :record-status-label="categoryStatus"
+    :schedules="schedules"
+    :action-loading-id="actionLoadingId"
+    empty-text="No schedules have been created for this category yet."
+    @select="onHeaderAction"
+    @back="goBack"
+    @refresh-schedules="loadSchedules"
+    @run-schedule-action="runScheduleAction"
   >
-    <div class="space-y-4">
-      <el-alert
-        v-if="errorMessage"
-        type="error"
-        show-icon
-        :closable="false"
-        :title="errorMessage"
-      />
-
-      <el-card shadow="never" v-loading="loadingRecord">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 class="text-base font-semibold">{{ categoryTitle }}</h3>
-            <p class="text-sm text-slate-600">
-              Scheduling is configured against this category record.
-            </p>
-          </div>
-          <div class="flex items-center gap-2">
-            <el-tag :type="statusTagType" effect="light">
-              {{ categoryStatus || 'draft' }}
-            </el-tag>
-            <el-button @click="router.push({ name: 'publicationCategories.list' })">
-              Back to List
-            </el-button>
-            <el-button
-              type="primary"
-              plain
-              @click="
-                router.push({ name: 'publicationCategories.details', params: { categoryId } })
-              "
-            >
-              View Details
-            </el-button>
-          </div>
-        </div>
-      </el-card>
-
+    <template #notices>
       <el-alert
         v-if="form.action === 'publish' && !canSchedulePublish && category"
         type="warning"
@@ -236,119 +205,42 @@ onMounted(async () => {
         title="Category cannot be scheduled for publishing in its current state."
         description="The category must first be approved before it can be scheduled for publishing."
       />
+    </template>
 
-      <el-card shadow="never">
-        <template #header>
-          <span class="font-semibold">Create Schedule</span>
-        </template>
+    <template #record>
+      <p class="workspace-panel__description">{{ categoryTitle }}</p>
+    </template>
 
-        <el-form label-position="top">
-          <AppFormRow :columns="3">
-            <el-form-item label="Action">
-              <el-select v-model="form.action">
-                <el-option label="Publish" value="publish" />
-                <el-option label="Unpublish" value="unpublish" />
-              </el-select>
-            </el-form-item>
+    <template #form>
+      <el-form label-position="top" class="workspace-form" @submit.prevent="scheduleAction">
+        <AppFormRow :columns="3">
+          <el-form-item label="Action">
+            <el-select v-model="form.action" size="large">
+              <el-option label="Publish" value="publish" />
+              <el-option label="Unpublish" value="unpublish" />
+            </el-select>
+          </el-form-item>
 
-            <el-form-item label="Run At">
-              <el-date-picker
-                v-model="form.runAt"
-                type="datetime"
-                placeholder="Select date and time"
-              />
-            </el-form-item>
+          <el-form-item label="Run At">
+            <el-date-picker
+              v-model="form.runAt"
+              type="datetime"
+              size="large"
+              placeholder="Select date and time"
+            />
+          </el-form-item>
 
-            <el-form-item label="Timezone">
-              <el-input v-model="form.timezone" />
-            </el-form-item>
-          </AppFormRow>
+          <el-form-item label="Timezone">
+            <el-input v-model="form.timezone" size="large" />
+          </el-form-item>
+        </AppFormRow>
 
-          <div class="mt-4">
-            <el-button type="primary" :loading="submitting" @click="scheduleAction">
-              Save Schedule
-            </el-button>
-          </div>
-        </el-form>
-      </el-card>
-
-      <el-card shadow="never">
-        <template #header>
-          <div class="flex items-center justify-between gap-2">
-            <span class="font-semibold">Current Schedules</span>
-            <el-button :loading="loadingSchedules" @click="loadSchedules">Refresh</el-button>
-          </div>
-        </template>
-
-        <el-table :data="schedules" stripe size="small" v-loading="loadingSchedules">
-          <el-table-column label="Action" min-width="130">
-            <template #default="{ row }">{{ mapScheduleAction(row.jobName) }}</template>
-          </el-table-column>
-          <el-table-column label="Run At" min-width="180">
-            <template #default="{ row }">{{ formatDate(row.runAt) }}</template>
-          </el-table-column>
-          <el-table-column label="Status" width="130">
-            <template #default="{ row }">
-              <el-tag :type="getScheduleStatusType(row.status)" effect="light">
-                {{ row.status || '-' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="Last Updated" min-width="170">
-            <template #default="{ row }">{{
-              formatDate(row.lastModifiedAt || row.updatedAt)
-            }}</template>
-          </el-table-column>
-          <el-table-column label="Manage" min-width="260" fixed="right">
-            <template #default="{ row }">
-              <div class="flex flex-wrap gap-2">
-                <el-button
-                  size="small"
-                  :loading="actionLoadingId === `${row.scheduleId}:runNow`"
-                  @click="runScheduleAction(row.scheduleId, 'runNow')"
-                >
-                  Run Now
-                </el-button>
-
-                <el-button
-                  v-if="row.status === 'active'"
-                  size="small"
-                  type="warning"
-                  :loading="actionLoadingId === `${row.scheduleId}:pause`"
-                  @click="runScheduleAction(row.scheduleId, 'pause')"
-                >
-                  Pause
-                </el-button>
-
-                <el-button
-                  v-if="row.status === 'paused'"
-                  size="small"
-                  type="success"
-                  :loading="actionLoadingId === `${row.scheduleId}:resume`"
-                  @click="runScheduleAction(row.scheduleId, 'resume')"
-                >
-                  Resume
-                </el-button>
-
-                <el-button
-                  v-if="row.status !== 'cancelled' && row.status !== 'completed'"
-                  size="small"
-                  type="danger"
-                  :loading="actionLoadingId === `${row.scheduleId}:cancel`"
-                  @click="runScheduleAction(row.scheduleId, 'cancel')"
-                >
-                  Cancel
-                </el-button>
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
-
-        <el-empty
-          v-if="!loadingSchedules && schedules.length === 0"
-          description="No schedules created yet."
-        />
-      </el-card>
-    </div>
-  </page-wrapper>
+        <div class="workspace-form__actions">
+          <el-button type="primary" size="large" :loading="submitting" native-type="submit">
+            Save Schedule
+          </el-button>
+        </div>
+      </el-form>
+    </template>
+  </EntityScheduleWorkspace>
 </template>

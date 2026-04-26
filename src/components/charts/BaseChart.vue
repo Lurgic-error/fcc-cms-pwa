@@ -313,10 +313,3 @@ onBeforeUnmount(destroyChart)
 
   <el-empty v-else :description="emptyDescription" :image-size="72" />
 </template>
-
-<style scoped>
-.chart-canvas {
-  position: relative;
-  width: 100%;
-}
-</style>

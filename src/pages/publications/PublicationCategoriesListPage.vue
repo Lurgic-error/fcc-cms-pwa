@@ -4,12 +4,13 @@ import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 
 import { publicationsAPI } from '@/api'
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
+import OverviewFilterBar from '@/components/enterprise/OverviewFilterBar.vue'
 import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import EntityTable from '@/components/tables/EntityTable.vue'
-import BulkActionsDropdown from '@/components/workflow/BulkActionsDropdown.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { useEditorialActions } from '@/composables/useEditorialActions'
 import { useRouteAccess } from '@/composables/useRouteAccess'
@@ -60,6 +61,44 @@ const bulkActions = computed(() => getBulkActions(selectedCategories.value))
 const selectedRowKeys = computed(() =>
   selectedCategories.value.map((record) => categoryConfig.adapter.getId(record)),
 )
+const headerActions = computed(() => {
+  const actions = []
+
+  if (selectedCategories.value.length) {
+    actions.push(
+      ...bulkActions.value.map((action) => ({
+        ...action,
+        group: action.group || 'selection',
+      })),
+    )
+  }
+
+  actions.push({
+    key: 'refreshWorkspace',
+    label: 'Refresh Categories',
+    group: 'workspace',
+  })
+
+  if (canCreatePublication.value) {
+    actions.push({
+      key: 'createPublication',
+      label: 'Create Publication',
+      group: 'workspace',
+      disabled: isBusy.value,
+    })
+  }
+
+  if (canCreateCategory.value) {
+    actions.push({
+      key: 'createCategory',
+      label: 'Create Category',
+      group: 'workspace',
+      disabled: isBusy.value,
+    })
+  }
+
+  return actions
+})
 const isBusy = computed(() => loading.value || workflowLoading.value)
 const canOpenPublications = computed(() => canAccessRoute('publications.list'))
 const canCreateCategory = computed(() => canAccessRoute('publicationCategories.create'))
@@ -80,6 +119,45 @@ const categoriesWithoutPublications = computed(() =>
     .filter((category) => Number(category?.publicationCount || 0) === 0)
     .slice(0, 5),
 )
+
+const filterFields = computed(() => [
+  {
+    key: 'scope',
+    type: 'select',
+    label: 'Collection',
+    placeholder: 'Filter by collection',
+    options: [
+      { label: 'All Records', value: 'all' },
+      { label: 'Published', value: 'published' },
+      { label: 'Archived', value: 'archived' },
+      { label: 'Deleted', value: 'deleted' },
+    ],
+  },
+  {
+    key: 'status',
+    type: 'select',
+    label: 'Workflow Status',
+    placeholder: 'Filter by workflow status',
+    options: [
+      { label: 'Draft', value: 'draft' },
+      { label: 'Under Review', value: 'submitted' },
+      { label: 'Approved', value: 'approved' },
+      { label: 'Published', value: 'published' },
+      { label: 'Unpublished', value: 'unpublished' },
+      { label: 'Rejected', value: 'rejected' },
+    ],
+  },
+  {
+    key: 'validityType',
+    type: 'select',
+    label: 'Validity Type',
+    placeholder: 'Filter by validity type',
+    options: [
+      { label: 'Permanent', value: 'permanent' },
+      { label: 'Time-bound', value: 'time-bound' },
+    ],
+  },
+])
 
 function buildQuery({ forSummary = false } = {}) {
   const query = {
@@ -209,6 +287,12 @@ async function resetFilters() {
   await loadWorkspace()
 }
 
+function updateFilterValues(values = {}) {
+  filters.scope = typeof values.scope === 'string' ? values.scope : ''
+  filters.status = typeof values.status === 'string' ? values.status : ''
+  filters.validityType = typeof values.validityType === 'string' ? values.validityType : ''
+}
+
 async function onRowAction({ action, row }) {
   const completed = await executeRecordAction(action, row, {
     runWorkflow: runCategoryWorkflow,
@@ -231,6 +315,28 @@ async function onBulkAction(action) {
   }
 }
 
+async function onHeaderAction(action) {
+  if (!action) return
+
+  if (selectedCategories.value.length && bulkActions.value.some((item) => item.key === action.key)) {
+    await onBulkAction(action)
+    return
+  }
+
+  switch (action.key) {
+    case 'refreshWorkspace':
+      await loadWorkspace()
+      return
+    case 'createPublication':
+      goToCreatePublication()
+      return
+    case 'createCategory':
+      goToCreateCategory()
+      return
+    default:
+  }
+}
+
 watch(
   () => filters.search,
   () => {
@@ -248,61 +354,19 @@ onMounted(loadWorkspace)
 <template>
   <PageWrapper>
     <template #header>
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between w-full">
-        <div>
-          <h1 class="page-title fcc-page-title">Category directory for publications management</h1>
-          <p class="page-description fcc-page-subtitle mt-1">
-            Categories are the structural layer behind publication records. Review their workflow
-            state, validity rules, and publication counts here before editors move back into the
-            publication forms.
-          </p>
-        </div>
-
-        <div class="flex items-center gap-3">
-          <span v-if="selectedCategories.length" class="px-2 text-sm font-medium text-slate-500">
-            {{ selectedCategories.length }} selected
-          </span>
-          <BulkActionsDropdown
-            v-if="selectedCategories.length"
-            :actions="bulkActions"
-            :selection-count="selectedCategories.length"
-            :loading="isBusy"
-            @select="onBulkAction"
-          />
-          <el-button
-            v-if="canOpenPublications"
-            plain
-            round
-            :disabled="isBusy"
-            @click="goToPublications"
-          >
-            Back to Publications
-          </el-button>
-          <el-button plain round :loading="isBusy" @click="loadWorkspace">Refresh</el-button>
-          <el-button
-            v-if="canCreatePublication"
-            type="primary"
-            plain
-            round
-            :disabled="isBusy"
-            @click="goToCreatePublication"
-          >
-            Create Publication
-          </el-button>
-          <el-button
-            v-if="canCreateCategory"
-            type="primary"
-            round
-            :disabled="isBusy"
-            @click="goToCreateCategory"
-          >
-            Create Category
-          </el-button>
-        </div>
-      </div>
+      <EnterprisePageHeader
+        title="Category directory for publications management"
+        description="Categories are the structural layer behind publication records. Review their workflow state, validity rules, and publication counts here before editors move back into the publication forms."
+        :actions="headerActions"
+        :loading="isBusy"
+        :selection-count="selectedCategories.length"
+        :back-disabled="!canOpenPublications"
+        @select="onHeaderAction"
+        @back="goToPublications"
+      />
     </template>
 
-    <div class="space-y-6 mt-4">
+    <div class="enterprise-stack enterprise-stack--spacious">
       <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" />
 
       <OverviewStatsGrid :stats="stats" />
@@ -313,19 +377,19 @@ onMounted(loadWorkspace)
             <StatusBadge value="published" :label="`${categorySummary.published} published`" />
           </template>
 
-          <div v-if="recentCategories.length" class="space-y-3">
-            <button
+          <div v-if="recentCategories.length" class="enterprise-support-list">
+            <el-button
               v-for="category in recentCategories"
               :key="category.categoryId"
-              type="button"
-              class="flex w-full items-center justify-between p-4 rounded-[var(--fcc-radius-lg)] border border-[var(--fcc-border)] bg-[var(--fcc-surface-muted)] text-left transition hover:border-[var(--fcc-primary-400)]"
+              text
+              class="enterprise-support-button"
               @click="goToDetails(category)"
             >
-              <div>
-                <p class="font-semibold text-[var(--fcc-text)]">
+              <div class="enterprise-support-button__body">
+                <p class="enterprise-support-button__title">
                   {{ resolveLocalizedLabel(category) }}
                 </p>
-                <p class="text-sm text-[var(--fcc-text-muted)] mt-1">
+                <p class="enterprise-support-button__meta">
                   {{
                     formatDisplayDate(
                       category.lastModifiedAt || category.updatedAt || category.createdAt,
@@ -334,7 +398,7 @@ onMounted(loadWorkspace)
                 </p>
               </div>
               <StatusBadge :value="category.effectiveStatus || category.publicationStatus" />
-            </button>
+            </el-button>
           </div>
 
           <el-empty v-else description="No categories available yet." :image-size="60" />
@@ -345,24 +409,24 @@ onMounted(loadWorkspace)
             <StatusBadge value="draft" :label="`${categorySummary.empty} empty`" />
           </template>
 
-          <div v-if="categoriesWithoutPublications.length" class="space-y-3">
-            <button
+          <div v-if="categoriesWithoutPublications.length" class="enterprise-support-list">
+            <el-button
               v-for="category in categoriesWithoutPublications"
               :key="category.categoryId"
-              type="button"
-              class="flex w-full items-center justify-between p-4 rounded-[var(--fcc-radius-lg)] border border-[var(--fcc-border)] bg-[var(--fcc-surface-muted)] text-left transition hover:border-[var(--fcc-primary-400)]"
+              text
+              class="enterprise-support-button"
               @click="goToDetails(category)"
             >
-              <div>
-                <p class="font-semibold text-[var(--fcc-text)]">
+              <div class="enterprise-support-button__body">
+                <p class="enterprise-support-button__title">
                   {{ resolveLocalizedLabel(category) }}
                 </p>
-                <p class="text-sm text-[var(--fcc-text-muted)] mt-1">
+                <p class="enterprise-support-button__meta">
                   {{ getStatusLabel(category.effectiveStatus || category.publicationStatus) }}
                 </p>
               </div>
-              <el-button size="small" plain round type="primary">Open</el-button>
-            </button>
+              <span class="enterprise-support-button__cta">Open</span>
+            </el-button>
           </div>
 
           <el-empty
@@ -375,7 +439,7 @@ onMounted(loadWorkspace)
 
       <AppBentoGrid columns="2">
         <AppDetailCard title="Visibility Rules">
-          <div class="space-y-3 text-sm text-[var(--fcc-text-muted)] leading-relaxed p-2">
+          <div class="enterprise-note-list">
             <p>Categories must be published before their publications can be public.</p>
             <p>
               Published categories with zero published publications stay internally ready, but they
@@ -389,60 +453,43 @@ onMounted(loadWorkspace)
         </AppDetailCard>
 
         <AppDetailCard title="Module Snapshot">
-          <div class="space-y-4 text-sm text-[var(--fcc-text)] p-2">
-            <div class="flex items-center justify-between pb-3 border-b border-[var(--fcc-border)]">
-              <span class="text-[var(--fcc-text-muted)]">Total linked publications</span>
-              <strong class="text-base">{{ publicationSummary.total }}</strong>
+          <div class="enterprise-stat-list">
+            <div class="enterprise-stat-row">
+              <span class="enterprise-stat-row__label">Total linked publications</span>
+              <strong class="enterprise-stat-row__value">{{ publicationSummary.total }}</strong>
             </div>
-            <div class="flex items-center justify-between pb-3 border-b border-[var(--fcc-border)]">
-              <span class="text-[var(--fcc-text-muted)]">Published publications</span>
-              <strong class="text-base">{{ publicationSummary.published }}</strong>
+            <div class="enterprise-stat-row">
+              <span class="enterprise-stat-row__label">Published publications</span>
+              <strong class="enterprise-stat-row__value">{{ publicationSummary.published }}</strong>
             </div>
-            <div class="flex items-center justify-between pb-3 border-b border-[var(--fcc-border)]">
-              <span class="text-[var(--fcc-text-muted)]">Categories waiting for review</span>
-              <strong class="text-base">{{ categorySummary.submitted }}</strong>
+            <div class="enterprise-stat-row">
+              <span class="enterprise-stat-row__label">Categories waiting for review</span>
+              <strong class="enterprise-stat-row__value">{{ categorySummary.submitted }}</strong>
             </div>
-            <div class="flex items-center justify-between">
-              <span class="text-[var(--fcc-text-muted)]">Approved categories ready to publish</span>
-              <strong class="text-base">{{ categorySummary.approved }}</strong>
+            <div class="enterprise-stat-row">
+              <span class="enterprise-stat-row__label">Approved categories ready to publish</span>
+              <strong class="enterprise-stat-row__value">{{ categorySummary.approved }}</strong>
             </div>
           </div>
         </AppDetailCard>
       </AppBentoGrid>
 
-      <section
-        class="rounded-[var(--fcc-radius-lg)] border border-[var(--fcc-border)] bg-[var(--fcc-surface)] p-4 shadow-sm"
-      >
-        <div class="grid gap-3 lg:grid-cols-[1.4fr,1fr,1fr,1fr,auto]">
-          <el-input
-            v-model="filters.search"
-            clearable
-            placeholder="Search categories by name, key, or description"
-          />
-          <el-select v-model="filters.scope" clearable placeholder="Filter by collection">
-            <el-option label="All Records" value="all" />
-            <el-option label="Published" value="published" />
-            <el-option label="Archived" value="archived" />
-            <el-option label="Deleted" value="deleted" />
-          </el-select>
-          <el-select v-model="filters.status" clearable placeholder="Filter by workflow status">
-            <el-option label="Draft" value="draft" />
-            <el-option label="Under Review" value="submitted" />
-            <el-option label="Approved" value="approved" />
-            <el-option label="Published" value="published" />
-            <el-option label="Unpublished" value="unpublished" />
-            <el-option label="Rejected" value="rejected" />
-          </el-select>
-          <el-select v-model="filters.validityType" clearable placeholder="Filter by validity type">
-            <el-option label="Permanent" value="permanent" />
-            <el-option label="Time-bound" value="time-bound" />
-          </el-select>
-          <div class="flex flex-wrap justify-end gap-2">
-            <el-button plain :disabled="isBusy" @click="resetFilters">Reset</el-button>
-            <el-button type="primary" :loading="isBusy" @click="applyFilters">Apply</el-button>
-          </div>
-        </div>
-      </section>
+      <OverviewFilterBar
+        :search-query="filters.search"
+        search-label="Search Categories"
+        search-placeholder="Search categories by name, key, or description"
+        :filter-fields="filterFields"
+        :filter-values="{
+          scope: filters.scope,
+          status: filters.status,
+          validityType: filters.validityType,
+        }"
+        :loading="isBusy"
+        @update:search-query="filters.search = $event"
+        @update:filter-values="updateFilterValues"
+        @apply="applyFilters"
+        @reset="resetFilters"
+      />
 
       <EntityTable
         title="Category Directory"

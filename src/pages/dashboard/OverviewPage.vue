@@ -8,8 +8,10 @@ import {
   videosAPI,
   visitorsAPI,
 } from '@/api'
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
 import OverviewChartCard from '@/components/enterprise/OverviewChartCard.vue'
 import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import { useUsersStore } from '@/stores/useUsersStore'
@@ -30,6 +32,10 @@ import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const usersStore = useUsersStore()
+const headerActions = Object.freeze([
+  { key: 'refresh', label: 'Refresh overview' },
+  { key: 'analytics', label: 'Open analytics' },
+])
 
 const loading = ref(false)
 const loadError = ref('')
@@ -305,6 +311,17 @@ function open(route) {
   router.push(route)
 }
 
+async function onHeaderAction(action) {
+  if (action?.key === 'refresh') {
+    await loadOverview()
+    return
+  }
+
+  if (action?.key === 'analytics') {
+    open({ name: 'dashboard.analytics' })
+  }
+}
+
 const editorialHealth = computed(() => [
   {
     label: 'Under review',
@@ -328,34 +345,32 @@ onMounted(loadOverview)
 </script>
 
 <template>
-  <PageWrapper
-    title="Dashboard"
-    description="A calm overview of what is ready for the website, what still needs attention, and where your editorial team should work next."
-  >
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Editorial Control Center"
+        title="Dashboard"
+        description="A calm overview of what is ready for the website, what still needs attention, and where your editorial team should work next."
+        :actions="headerActions"
+        :loading="loading"
+        :show-back="false"
+        @select="onHeaderAction"
+      />
+    </template>
+
     <div class="dashboard-shell">
       <el-alert v-if="loadError" type="warning" show-icon :closable="false" :title="loadError" />
 
-      <section class="dashboard-hero surface-card">
-        <div class="dashboard-hero__copy">
-          <p class="dashboard-eyebrow">Editorial control center</p>
+      <WorkspacePanel class="dashboard-hero" eyebrow="Editorial control center">
+        <template #title>
           <h2 class="dashboard-hero__title">Welcome back, {{ userName }}</h2>
+        </template>
+        <template #description>
           <p class="dashboard-hero__description">
             Use this view to monitor the website, the CMS, and the publication workflow without
             digging through technical screens. Your current role is {{ roleName }}.
           </p>
-
-          <div class="dashboard-hero__meta">
-            <div
-              v-for="item in editorialHealth"
-              :key="item.label"
-              class="dashboard-hero__meta-item"
-            >
-              <span>{{ item.label }}</span>
-              <strong>{{ item.value }}</strong>
-            </div>
-          </div>
-        </div>
-
+        </template>
         <div class="dashboard-hero__actions">
           <el-button type="primary" @click="open({ name: 'publications.list' })">
             Manage Publications
@@ -370,25 +385,38 @@ onMounted(loadOverview)
             Website Content
           </el-button>
         </div>
-      </section>
+
+        <div class="dashboard-hero__meta">
+          <div
+            v-for="item in editorialHealth"
+            :key="item.label"
+            class="dashboard-hero__meta-item"
+          >
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+          </div>
+        </div>
+      </WorkspacePanel>
 
       <OverviewStatsGrid :stats="headlineStats" />
 
       <div class="dashboard-grid">
-        <article class="dashboard-card dashboard-panel dashboard-card--publication surface-card">
-          <header class="dashboard-panel__header">
-            <div>
-              <p class="dashboard-eyebrow">Publication workspace</p>
-              <h3>Categories and publications are moving together</h3>
-            </div>
-            <div class="flex flex-wrap gap-2">
+        <WorkspacePanel
+          tag="article"
+          class="dashboard-card dashboard-panel dashboard-card--publication"
+          eyebrow="Publication workspace"
+          title="Categories and publications are moving together"
+          heading-level="h3"
+        >
+          <template #aside>
+            <div class="dashboard-panel__badges">
               <StatusBadge value="published" :label="`${categorySummary.live} live categories`" />
               <StatusBadge
                 value="approved"
                 :label="`${publicationSummary.published} public publications`"
               />
             </div>
-          </header>
+          </template>
 
           <div class="dashboard-kpi-grid">
             <div class="dashboard-kpi-card">
@@ -420,16 +448,15 @@ onMounted(loadOverview)
               Review scheduling
             </el-button>
           </div>
-        </article>
+        </WorkspacePanel>
 
-        <article class="dashboard-card dashboard-panel dashboard-card--pulse surface-card">
-          <header class="dashboard-panel__header">
-            <div>
-              <p class="dashboard-eyebrow">Website pulse</p>
-              <h3>Content mix on hand</h3>
-            </div>
-          </header>
-
+        <WorkspacePanel
+          tag="article"
+          class="dashboard-card dashboard-panel dashboard-card--pulse"
+          eyebrow="Website pulse"
+          title="Content mix on hand"
+          heading-level="h3"
+        >
           <div class="dashboard-summary-list">
             <div class="dashboard-summary-row">
               <span>News stories</span>
@@ -468,7 +495,7 @@ onMounted(loadOverview)
               </strong>
             </div>
           </div>
-        </article>
+        </WorkspacePanel>
 
         <OverviewChartCard
           class="dashboard-card dashboard-chart dashboard-card--traffic"
@@ -509,19 +536,18 @@ onMounted(loadOverview)
           :data="publicationStatusSeries"
         />
 
-        <article class="dashboard-card dashboard-panel dashboard-card--attention surface-card">
-          <header class="dashboard-panel__header">
-            <div>
-              <p class="dashboard-eyebrow">Needs attention</p>
-              <h3>What to work on next</h3>
-            </div>
-          </header>
-
+        <WorkspacePanel
+          tag="article"
+          class="dashboard-card dashboard-panel dashboard-card--attention"
+          eyebrow="Needs attention"
+          title="What to work on next"
+          heading-level="h3"
+        >
           <div class="dashboard-attention-list">
-            <button
+            <el-button
               v-for="item in attentionItems"
               :key="item.title"
-              type="button"
+              text
               class="dashboard-attention-card"
               @click="open(item.route)"
             >
@@ -531,18 +557,20 @@ onMounted(loadOverview)
                 <p>{{ item.helper }}</p>
               </div>
               <span class="dashboard-attention-card__action">{{ item.action }}</span>
-            </button>
+            </el-button>
           </div>
-        </article>
+        </WorkspacePanel>
 
-        <article class="dashboard-card dashboard-panel dashboard-card--activity surface-card">
-          <header class="dashboard-panel__header">
-            <div>
-              <p class="dashboard-eyebrow">Recent activity</p>
-              <h3>Recently updated records</h3>
-            </div>
+        <WorkspacePanel
+          tag="article"
+          class="dashboard-card dashboard-panel dashboard-card--activity"
+          eyebrow="Recent activity"
+          title="Recently updated records"
+          heading-level="h3"
+        >
+          <template #aside>
             <el-button plain :loading="loading" @click="loadOverview">Refresh overview</el-button>
-          </header>
+          </template>
 
           <div class="dashboard-activity-list">
             <div
@@ -562,271 +590,8 @@ onMounted(loadOverview)
               </div>
             </div>
           </div>
-        </article>
+        </WorkspacePanel>
       </div>
     </div>
   </PageWrapper>
 </template>
-
-<style scoped>
-.dashboard-shell {
-  display: grid;
-  gap: 1rem;
-}
-
-.dashboard-hero {
-  display: grid;
-  gap: 1.2rem;
-  padding: 1.35rem;
-  background:
-    radial-gradient(circle at top right, rgba(0, 151, 218, 0.16), transparent 28%),
-    radial-gradient(circle at bottom left, rgba(27, 48, 103, 0.08), transparent 36%),
-    linear-gradient(
-      135deg,
-      color-mix(in srgb, var(--fcc-surface) 98%, white),
-      var(--fcc-primary-50)
-    );
-}
-
-.dashboard-eyebrow {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--fcc-secondary-700);
-}
-
-.dashboard-hero__title {
-  margin-top: 0.35rem;
-  font-size: clamp(1.5rem, 2.4vw, 2.2rem);
-}
-
-.dashboard-hero__description {
-  margin-top: 0.45rem;
-  max-width: 44rem;
-  color: var(--fcc-text-muted);
-}
-
-.dashboard-hero__meta {
-  display: grid;
-  gap: 0.8rem;
-  margin-top: 1rem;
-}
-
-.dashboard-hero__meta-item {
-  border-radius: 1rem;
-  border: 1px solid var(--fcc-border);
-  background: color-mix(in srgb, var(--fcc-surface) 92%, transparent);
-  padding: 0.85rem 1rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  color: var(--fcc-text-muted);
-}
-
-.dashboard-hero__meta-item strong {
-  color: var(--fcc-text);
-}
-
-.dashboard-hero__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: start;
-}
-
-.dashboard-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(0, 1fr);
-  grid-auto-flow: dense;
-}
-
-.dashboard-card,
-.dashboard-panel,
-.dashboard-chart {
-  min-height: 100%;
-  min-width: 0;
-}
-
-.dashboard-summary-row__text {
-  max-width: 15rem;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-align: right;
-}
-
-.dashboard-panel {
-  padding: 1.2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.dashboard-panel__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: start;
-  justify-content: space-between;
-  gap: 0.85rem;
-}
-
-.dashboard-panel__header h3 {
-  font-size: 1.15rem;
-}
-
-.dashboard-kpi-grid {
-  display: grid;
-  gap: 0.8rem;
-}
-
-.dashboard-kpi-card {
-  border-radius: 1rem;
-  border: 1px solid var(--fcc-border);
-  background: color-mix(in srgb, var(--fcc-surface) 96%, var(--fcc-primary-50));
-  padding: 0.95rem 1rem;
-  display: grid;
-  gap: 0.28rem;
-}
-
-.dashboard-kpi-card span,
-.dashboard-summary-row span,
-.dashboard-activity-item p,
-.dashboard-attention-card p {
-  color: var(--fcc-text-muted);
-}
-
-.dashboard-kpi-card strong,
-.dashboard-summary-row strong,
-.dashboard-attention-card__value {
-  font-size: 1.25rem;
-  color: var(--fcc-text);
-}
-
-.dashboard-panel__footer {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-top: auto;
-}
-
-.dashboard-summary-list,
-.dashboard-activity-list,
-.dashboard-attention-list {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.dashboard-summary-row,
-.dashboard-activity-item {
-  border-radius: 1rem;
-  border: 1px solid var(--fcc-border);
-  padding: 0.9rem 1rem;
-  background: color-mix(in srgb, var(--fcc-surface) 97%, transparent);
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: center;
-}
-
-.dashboard-attention-card {
-  width: 100%;
-  text-align: left;
-  border-radius: 1rem;
-  border: 1px solid var(--fcc-border);
-  background: color-mix(in srgb, var(--fcc-surface) 96%, var(--fcc-secondary-50));
-  padding: 1rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: end;
-  cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
-}
-
-.dashboard-attention-card:hover {
-  transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--fcc-secondary-600) 34%, var(--fcc-border));
-  box-shadow: var(--fcc-shadow-soft);
-}
-
-.dashboard-attention-card h4,
-.dashboard-activity-item h4 {
-  margin-top: 0.2rem;
-  font-size: 1rem;
-}
-
-.dashboard-attention-card__action {
-  font-size: 0.82rem;
-  font-weight: 700;
-  color: var(--fcc-primary-800);
-}
-
-.dashboard-activity-item__type {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.dashboard-activity-item__meta {
-  display: grid;
-  justify-items: end;
-  gap: 0.45rem;
-  font-size: 0.82rem;
-}
-
-@media (min-width: 900px) {
-  .dashboard-hero {
-    grid-template-columns: minmax(0, 1.35fr) minmax(16rem, 0.9fr);
-    align-items: start;
-  }
-
-  .dashboard-hero__meta,
-  .dashboard-kpi-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dashboard-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .dashboard-card--publication,
-  .dashboard-card--activity {
-    grid-column: span 2;
-  }
-}
-
-@media (min-width: 1280px) {
-  .dashboard-grid {
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-  }
-
-  .dashboard-card--publication {
-    grid-column: span 8;
-  }
-
-  .dashboard-card--pulse {
-    grid-column: span 4;
-  }
-
-  .dashboard-card--traffic,
-  .dashboard-card--paths,
-  .dashboard-card--sources,
-  .dashboard-card--status {
-    grid-column: span 4;
-  }
-
-  .dashboard-card--attention {
-    grid-column: span 8;
-  }
-
-  .dashboard-card--activity {
-    grid-column: span 12;
-  }
-}
-</style>

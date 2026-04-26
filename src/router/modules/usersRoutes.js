@@ -9,7 +9,7 @@ export default [
     component: CmsLayout,
     meta: {
       ...requireAuth,
-      ...requireRole([ROLES.ADMIN]),
+      ...requireRole([ROLES.PUBLISHER]),
 
       nav: {
         section: NAV_SECTIONS.USERS,

@@ -1,16 +1,22 @@
 <script setup>
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
 import AppSearchField from '@/components/common/AppSearchField.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
 import AppTagInputField from '@/components/forms/AppTagInputField.vue'
+import SmartFormGrid from '@/components/forms/SmartFormGrid.vue'
 import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import EntityWorkflowButtons from '@/components/workflow/EntityWorkflowButtons.vue'
 import { useContentItemsStore } from '@/stores/useContentItemsStore'
 import { formatDisplayDate } from '@/utils/adminPresentation'
+import { replaceValidationState, validateRequiredFields } from '@/utils/formValidation'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const itemsStore = useContentItemsStore()
 const { entities: items, loading, error, pagination } = storeToRefs(itemsStore)
 
@@ -19,6 +25,7 @@ const feedback = ref('')
 const searchQuery = ref('')
 const pager = reactive({ page: 1, limit: 20 })
 const metadataSnapshot = ref({})
+const validationErrors = reactive({})
 
 const form = reactive({
   key: '',
@@ -59,6 +66,85 @@ const filteredItems = computed(() => {
   )
 })
 
+const visibilityOptions = Object.freeze([
+  { label: 'Public', value: 'public' },
+  { label: 'Private', value: 'private' },
+  { label: 'Authenticated only', value: 'auth-only' },
+])
+
+const identityFields = Object.freeze([
+  {
+    key: 'key',
+    label: 'Reference Key',
+    placeholder: 'homepage.hero.primary',
+    required: true,
+  },
+  {
+    key: 'type',
+    label: 'Content Type',
+    placeholder: 'hero, banner, callout, caption',
+    required: true,
+  },
+  {
+    key: 'slug',
+    label: 'Optional Slug',
+    placeholder: '/about/mission',
+  },
+  {
+    key: 'visibility',
+    label: 'Visibility',
+    component: 'select',
+    options: visibilityOptions,
+  },
+])
+
+const metadataFields = Object.freeze([
+  {
+    key: 'titleEn',
+    label: 'Title (English)',
+    placeholder: 'Headline used on the website',
+  },
+  {
+    key: 'titleSw',
+    label: 'Title (Swahili)',
+    placeholder: 'Kichwa cha maudhui',
+  },
+  {
+    key: 'summaryEn',
+    label: 'Summary (English)',
+    component: 'textarea',
+    rows: 4,
+    placeholder: 'Short summary for editors and website visitors',
+  },
+  {
+    key: 'summarySw',
+    label: 'Summary (Swahili)',
+    component: 'textarea',
+    rows: 4,
+    placeholder: 'Muhtasari mfupi wa maudhui',
+  },
+])
+
+const actionFields = Object.freeze([
+  {
+    key: 'ctaLabel',
+    label: 'Call to Action Label',
+    placeholder: 'Read more, Download, Contact us',
+  },
+  {
+    key: 'ctaHref',
+    label: 'Call to Action Link',
+    placeholder: '/publications or https://...',
+  },
+  {
+    key: 'editorNote',
+    label: 'Editorial Note',
+    component: 'textarea',
+    rows: 4,
+    placeholder: 'Anything your PR team should remember about where this content is used',
+  },
+])
+
 const stats = computed(() => [
   { key: 'total', label: 'Content Items', value: items.value.length },
   {
@@ -78,7 +164,13 @@ const stats = computed(() => [
   },
 ])
 
+const headerActions = Object.freeze([
+  { key: 'refresh', label: 'Refresh workspace' },
+  { key: 'create', label: 'New content item' },
+])
+
 function loadForm(item = null) {
+  replaceValidationState(validationErrors)
   metadataSnapshot.value = item?.metadata || {}
   form.key = item?.key || ''
   form.type = item?.type || ''
@@ -120,8 +212,27 @@ async function setLimit(limit) {
   await refresh()
 }
 
+function validateForm() {
+  const { errors, isValid } = validateRequiredFields([
+    {
+      key: 'key',
+      label: 'Reference Key',
+      value: () => form.key.trim(),
+    },
+    {
+      key: 'type',
+      label: 'Content Type',
+      value: () => form.type.trim(),
+    },
+  ])
+
+  replaceValidationState(validationErrors, errors)
+  return isValid
+}
+
 async function save() {
   feedback.value = ''
+  if (!validateForm()) return
 
   const payload = {
     key: form.key.trim(),
@@ -180,52 +291,69 @@ async function runWorkflow(action) {
   await refresh()
 }
 
+async function goBack() {
+  await router.push({ name: 'contentManagement.overview' })
+}
+
+async function onHeaderAction(action) {
+  if (action?.key === 'refresh') {
+    await refresh()
+    return
+  }
+
+  if (action?.key === 'create') {
+    clearForm()
+  }
+}
+
 onMounted(refresh)
 </script>
 
 <template>
-  <PageWrapper
-    title="Content Items"
-    description="Manage reusable website copy in a structured editorial form instead of editing metadata by hand."
-  >
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Content Workspace"
+        title="Content Items"
+        description="Manage reusable website copy in a structured editorial form instead of editing metadata by hand."
+        :actions="headerActions"
+        :loading="loading"
+        @select="onHeaderAction"
+        @back="goBack"
+      />
+    </template>
+
     <div class="workspace-shell">
       <OverviewStatsGrid :stats="stats" />
 
       <section class="workspace-grid">
-        <article class="workspace-panel surface-card">
-          <header class="workspace-panel__header">
-            <div>
-              <p class="workspace-eyebrow">Editorial form</p>
-              <h2>{{ selectedId ? 'Refine this content item' : 'Create a new content item' }}</h2>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <el-button plain @click="refresh">Refresh</el-button>
-              <el-button type="primary" plain @click="clearForm">New item</el-button>
-            </div>
-          </header>
-
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Editorial form"
+          :title="selectedId ? 'Refine this content item' : 'Create a new content item'"
+        >
           <el-form label-position="top" class="workspace-form" @submit.prevent="save">
-            <div class="workspace-form__grid">
-              <el-form-item label="Reference Key" required>
-                <el-input v-model="form.key" placeholder="homepage.hero.primary" />
-              </el-form-item>
+            <SmartFormGrid :fields="identityFields" :columns="2">
+              <template #default="{ field }">
+                <el-form-item
+                  :label="field.label"
+                  :required="field.required"
+                  :error="validationErrors[field.key]"
+                  class="form-item-flush"
+                >
+                  <el-select v-if="field.component === 'select'" v-model="form[field.key]">
+                    <el-option
+                      v-for="option in field.options || []"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
 
-              <el-form-item label="Content Type" required>
-                <el-input v-model="form.type" placeholder="hero, banner, callout, caption" />
-              </el-form-item>
-
-              <el-form-item label="Optional Slug">
-                <el-input v-model="form.slug" placeholder="/about/mission" />
-              </el-form-item>
-
-              <el-form-item label="Visibility">
-                <el-select v-model="form.visibility">
-                  <el-option label="Public" value="public" />
-                  <el-option label="Private" value="private" />
-                  <el-option label="Authenticated only" value="auth-only" />
-                </el-select>
-              </el-form-item>
-            </div>
+                  <el-input v-else v-model="form[field.key]" :placeholder="field.placeholder" />
+                </el-form-item>
+              </template>
+            </SmartFormGrid>
 
             <el-form-item label="Tags">
               <AppTagInputField
@@ -234,52 +362,37 @@ onMounted(refresh)
               />
             </el-form-item>
 
-            <div class="workspace-form__grid">
-              <el-form-item label="Title (English)">
-                <el-input v-model="form.titleEn" placeholder="Headline used on the website" />
-              </el-form-item>
+            <SmartFormGrid :fields="metadataFields" :columns="2">
+              <template #default="{ field }">
+                <el-form-item :label="field.label" class="form-item-flush">
+                  <el-input
+                    v-if="field.component === 'textarea'"
+                    v-model="form[field.key]"
+                    type="textarea"
+                    :rows="field.rows || 4"
+                    :placeholder="field.placeholder"
+                  />
 
-              <el-form-item label="Title (Swahili)">
-                <el-input v-model="form.titleSw" placeholder="Kichwa cha maudhui" />
-              </el-form-item>
+                  <el-input v-else v-model="form[field.key]" :placeholder="field.placeholder" />
+                </el-form-item>
+              </template>
+            </SmartFormGrid>
 
-              <el-form-item label="Summary (English)">
-                <el-input
-                  v-model="form.summaryEn"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="Short summary for editors and website visitors"
-                />
-              </el-form-item>
+            <SmartFormGrid :fields="actionFields" :columns="2">
+              <template #default="{ field }">
+                <el-form-item :label="field.label" class="form-item-flush">
+                  <el-input
+                    v-if="field.component === 'textarea'"
+                    v-model="form[field.key]"
+                    type="textarea"
+                    :rows="field.rows || 4"
+                    :placeholder="field.placeholder"
+                  />
 
-              <el-form-item label="Summary (Swahili)">
-                <el-input
-                  v-model="form.summarySw"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="Muhtasari mfupi wa maudhui"
-                />
-              </el-form-item>
-            </div>
-
-            <div class="workspace-form__grid">
-              <el-form-item label="Call to Action Label">
-                <el-input v-model="form.ctaLabel" placeholder="Read more, Download, Contact us" />
-              </el-form-item>
-
-              <el-form-item label="Call to Action Link">
-                <el-input v-model="form.ctaHref" placeholder="/publications or https://..." />
-              </el-form-item>
-            </div>
-
-            <el-form-item label="Editorial Note">
-              <el-input
-                v-model="form.editorNote"
-                type="textarea"
-                :rows="4"
-                placeholder="Anything your PR team should remember about where this content is used"
-              />
-            </el-form-item>
+                  <el-input v-else v-model="form[field.key]" :placeholder="field.placeholder" />
+                </el-form-item>
+              </template>
+            </SmartFormGrid>
 
             <div class="workspace-form__actions">
               <el-button @click="clearForm">Clear</el-button>
@@ -297,29 +410,29 @@ onMounted(refresh)
             />
             <el-alert v-if="error" type="error" show-icon :closable="false" :title="error" />
           </el-form>
-        </article>
+        </WorkspacePanel>
 
-        <article class="workspace-panel surface-card">
-          <header class="workspace-panel__header">
-            <div>
-              <p class="workspace-eyebrow">Content library</p>
-              <h2>Browse and select content items</h2>
-            </div>
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Content library"
+          title="Browse and select content items"
+        >
+          <template #aside>
             <AppSearchField
               v-model="searchQuery"
               label="Search content items"
               placeholder="Search by key, type, title, summary, or visibility"
               class="workspace-search"
             />
-          </header>
+          </template>
 
           <div class="workspace-table">
             <el-table :data="filteredItems" v-loading="loading" stripe>
               <el-table-column label="Key" min-width="220">
                 <template #default="{ row }">
-                  <button type="button" class="workspace-link" @click="selectContentItem(row)">
+                  <el-button link class="workspace-link" @click="selectContentItem(row)">
                     {{ row.key }}
-                  </button>
+                  </el-button>
                 </template>
               </el-table-column>
               <el-table-column label="Type" min-width="140" prop="type" />
@@ -349,21 +462,21 @@ onMounted(refresh)
             @update:page="setPage"
             @update:limit="setLimit"
           />
-        </article>
+        </WorkspacePanel>
       </section>
 
       <section class="workspace-grid workspace-grid--bottom">
-        <article class="workspace-panel surface-card">
-          <header class="workspace-panel__header">
-            <div>
-              <p class="workspace-eyebrow">Selected item</p>
-              <h2>{{ selected?.key || 'Choose an item from the library' }}</h2>
-            </div>
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Selected item"
+          :title="selected?.key || 'Choose an item from the library'"
+        >
+          <template #aside>
             <StatusBadge
               v-if="selected"
               :value="selected.effectiveStatus || selected.publicationStatus"
             />
-          </header>
+          </template>
 
           <div v-if="selected" class="workspace-summary">
             <div class="workspace-summary__row">
@@ -393,16 +506,13 @@ onMounted(refresh)
           <p v-else class="workspace-empty">
             Select a content item to see its editorial summary and workflow controls.
           </p>
-        </article>
+        </WorkspacePanel>
 
-        <article class="workspace-panel surface-card">
-          <header class="workspace-panel__header">
-            <div>
-              <p class="workspace-eyebrow">Workflow</p>
-              <h2>Review, publish, archive, or restore</h2>
-            </div>
-          </header>
-
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Workflow"
+          title="Review, publish, archive, or restore"
+        >
           <EntityWorkflowButtons
             :disabled="!selected"
             @submit="runWorkflow('submit')"
@@ -416,107 +526,8 @@ onMounted(refresh)
             @soft-delete="runWorkflow('softDelete')"
             @delete="runWorkflow('delete')"
           />
-        </article>
+        </WorkspacePanel>
       </section>
     </div>
   </PageWrapper>
 </template>
-
-<style scoped>
-.workspace-shell,
-.workspace-form,
-.workspace-summary {
-  display: grid;
-  gap: 1rem;
-}
-
-.workspace-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.workspace-panel {
-  padding: 1.2rem;
-}
-
-.workspace-panel__header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.9rem;
-  margin-bottom: 1rem;
-}
-
-.workspace-eyebrow {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--fcc-secondary-700);
-}
-
-.workspace-form__grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.workspace-form__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
-
-.workspace-search {
-  width: min(100%, 24rem);
-}
-
-.workspace-table {
-  min-height: 24rem;
-}
-
-.workspace-link {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  font: inherit;
-  color: var(--fcc-primary-800);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.workspace-summary__row {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-bottom: 0.85rem;
-  border-bottom: 1px solid var(--fcc-border);
-}
-
-.workspace-summary__row span {
-  color: var(--fcc-text-muted);
-}
-
-.workspace-summary__row strong {
-  text-align: right;
-  color: var(--fcc-text);
-}
-
-.workspace-empty {
-  color: var(--fcc-text-muted);
-}
-
-@media (min-width: 1024px) {
-  .workspace-grid {
-    grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
-  }
-
-  .workspace-grid--bottom {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  }
-
-  .workspace-form__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-</style>

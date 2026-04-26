@@ -1,16 +1,22 @@
 <script setup>
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
 import AppSearchField from '@/components/common/AppSearchField.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
 import AppTagInputField from '@/components/forms/AppTagInputField.vue'
+import SmartFormGrid from '@/components/forms/SmartFormGrid.vue'
 import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import EntityWorkflowButtons from '@/components/workflow/EntityWorkflowButtons.vue'
 import { useLocalesStore } from '@/stores/useLocalesStore'
 import { formatDisplayDate } from '@/utils/adminPresentation'
+import { replaceValidationState, validateRequiredFields } from '@/utils/formValidation'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const localesStore = useLocalesStore()
 const {
   entities: locales,
@@ -27,6 +33,7 @@ const feedback = ref('')
 const searchQuery = ref('')
 const fallbackInput = ref('')
 const pager = reactive({ page: 1, limit: 20 })
+const validationErrors = reactive({})
 
 const form = reactive({
   code: '',
@@ -55,6 +62,37 @@ const filteredLocales = computed(() => {
   )
 })
 
+const directionOptions = Object.freeze([
+  { label: 'Left to right', value: 'ltr' },
+  { label: 'Right to left', value: 'rtl' },
+])
+
+const localeFields = Object.freeze([
+  {
+    key: 'code',
+    label: 'Locale Code',
+    placeholder: 'en, sw, fr',
+    required: true,
+  },
+  {
+    key: 'name',
+    label: 'Display Name',
+    placeholder: 'English, Kiswahili, French',
+    required: true,
+  },
+  {
+    key: 'nativeName',
+    label: 'Native Name',
+    placeholder: 'Kiswahili, Francais',
+  },
+  {
+    key: 'direction',
+    label: 'Reading Direction',
+    component: 'select',
+    options: directionOptions,
+  },
+])
+
 const stats = computed(() => [
   { key: 'total', label: 'Locales', value: locales.value.length },
   { key: 'active', label: 'Active Locales', value: activeLocales.value.length },
@@ -70,7 +108,13 @@ const stats = computed(() => [
   },
 ])
 
+const headerActions = Object.freeze([
+  { key: 'refresh', label: 'Refresh workspace' },
+  { key: 'create', label: 'New locale' },
+])
+
 function loadForm(item = null) {
+  replaceValidationState(validationErrors)
   form.code = item?.code || ''
   form.name = item?.name || ''
   form.nativeName = item?.nativeName || ''
@@ -109,8 +153,27 @@ async function setLimit(limit) {
   await refresh()
 }
 
+function validateForm() {
+  const { errors, isValid } = validateRequiredFields([
+    {
+      key: 'code',
+      label: 'Locale Code',
+      value: () => form.code.trim().toLowerCase(),
+    },
+    {
+      key: 'name',
+      label: 'Display Name',
+      value: () => form.name.trim(),
+    },
+  ])
+
+  replaceValidationState(validationErrors, errors)
+  return isValid
+}
+
 async function onSubmit() {
   feedback.value = ''
+  if (!validateForm()) return
   const payload = {
     code: form.code.trim().toLowerCase(),
     name: form.name.trim(),
@@ -177,53 +240,71 @@ async function resolveFallbacks() {
   await localesStore.resolveFallbackChain(fallbackInput.value.trim())
 }
 
+async function goBack() {
+  await router.push({ name: 'contentManagement.overview' })
+}
+
+async function onHeaderAction(action) {
+  if (action?.key === 'refresh') {
+    await refresh()
+    return
+  }
+
+  if (action?.key === 'create') {
+    clearForm()
+  }
+}
+
 onMounted(refresh)
 </script>
 
 <template>
-  <PageWrapper
-    title="Locales"
-    description="Manage language options, fallback behavior, and publishing readiness in a translation-friendly workspace."
-  >
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Content Workspace"
+        title="Locales"
+        description="Manage language options, fallback behavior, and publishing readiness in a translation-friendly workspace."
+        :actions="headerActions"
+        :loading="loading"
+        @select="onHeaderAction"
+        @back="goBack"
+      />
+    </template>
+
     <div class="workspace-shell">
       <OverviewStatsGrid :stats="stats" />
 
       <section class="workspace-grid">
-        <article class="workspace-panel surface-card">
-          <header class="workspace-panel__header">
-            <div>
-              <p class="workspace-eyebrow">Language setup</p>
-              <h2>{{ selectedLocaleId ? 'Update locale settings' : 'Create a new locale' }}</h2>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <el-button plain @click="refresh">Refresh</el-button>
-              <el-button type="primary" plain @click="clearForm">New locale</el-button>
-            </div>
-          </header>
-
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Language setup"
+          :title="selectedLocaleId ? 'Update locale settings' : 'Create a new locale'"
+        >
           <el-form label-position="top" class="workspace-form" @submit.prevent="onSubmit">
-            <div class="workspace-form__grid">
-              <el-form-item label="Locale Code" required>
-                <el-input v-model="form.code" placeholder="en, sw, fr" />
-              </el-form-item>
+            <SmartFormGrid :fields="localeFields" :columns="2">
+              <template #default="{ field }">
+                <el-form-item
+                  :label="field.label"
+                  :required="field.required"
+                  :error="validationErrors[field.key]"
+                  class="form-item-flush"
+                >
+                  <el-select v-if="field.component === 'select'" v-model="form[field.key]">
+                    <el-option
+                      v-for="option in field.options || []"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
 
-              <el-form-item label="Display Name" required>
-                <el-input v-model="form.name" placeholder="English, Kiswahili, French" />
-              </el-form-item>
+                  <el-input v-else v-model="form[field.key]" :placeholder="field.placeholder" />
+                </el-form-item>
+              </template>
+            </SmartFormGrid>
 
-              <el-form-item label="Native Name">
-                <el-input v-model="form.nativeName" placeholder="Kiswahili, Francais" />
-              </el-form-item>
-
-              <el-form-item label="Reading Direction">
-                <el-select v-model="form.direction">
-                  <el-option label="Left to right" value="ltr" />
-                  <el-option label="Right to left" value="rtl" />
-                </el-select>
-              </el-form-item>
-            </div>
-
-            <el-form-item label="Fallback Locales">
+            <el-form-item label="Fallback Locales" class="form-item-flush">
               <AppTagInputField
                 v-model="form.fallbackLocales"
                 placeholder="Add fallback locale codes and press Enter"
@@ -251,29 +332,29 @@ onMounted(refresh)
             />
             <el-alert v-if="error" type="error" show-icon :closable="false" :title="error" />
           </el-form>
-        </article>
+        </WorkspacePanel>
 
-        <article class="workspace-panel surface-card">
-          <header class="workspace-panel__header">
-            <div>
-              <p class="workspace-eyebrow">Translation workspace</p>
-              <h2>Browse available locales</h2>
-            </div>
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Translation workspace"
+          title="Browse available locales"
+        >
+          <template #aside>
             <AppSearchField
               v-model="searchQuery"
               label="Search locales"
               placeholder="Search by locale code, display name, native name, or direction"
               class="workspace-search"
             />
-          </header>
+          </template>
 
           <div class="workspace-table">
             <el-table :data="filteredLocales" v-loading="loading" stripe>
               <el-table-column label="Locale" min-width="180">
                 <template #default="{ row }">
-                  <button type="button" class="workspace-link" @click="selectLocale(row)">
+                  <el-button link class="workspace-link" @click="selectLocale(row)">
                     {{ row.code.toUpperCase() }}
-                  </button>
+                  </el-button>
                 </template>
               </el-table-column>
               <el-table-column label="Name" min-width="180" prop="name" />
@@ -305,25 +386,18 @@ onMounted(refresh)
             @update:page="setPage"
             @update:limit="setLimit"
           />
-        </article>
+        </WorkspacePanel>
       </section>
 
       <section class="workspace-grid workspace-grid--bottom">
-        <article class="workspace-panel surface-card">
-          <header class="workspace-panel__header">
-            <div>
-              <p class="workspace-eyebrow">Fallback resolver</p>
-              <h2>Test the language chain</h2>
-            </div>
-          </header>
-
+        <WorkspacePanel tag="article" eyebrow="Fallback resolver" title="Test the language chain">
           <div class="workspace-form">
             <AppSearchField
               v-model="fallbackInput"
               label="Requested locale"
               placeholder="Type a locale code such as sw or fr"
             />
-            <div class="flex flex-wrap gap-2">
+            <div class="workspace-inline-actions">
               <el-button type="primary" @click="resolveFallbacks">Resolve fallback chain</el-button>
               <el-button plain @click="fallbackInput = ''">Clear</el-button>
             </div>
@@ -343,19 +417,19 @@ onMounted(refresh)
               </div>
             </div>
           </div>
-        </article>
+        </WorkspacePanel>
 
-        <article class="workspace-panel surface-card">
-          <header class="workspace-panel__header">
-            <div>
-              <p class="workspace-eyebrow">Selected locale</p>
-              <h2>{{ selectedLocale?.name || 'Choose a locale from the list' }}</h2>
-            </div>
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Selected locale"
+          :title="selectedLocale?.name || 'Choose a locale from the list'"
+        >
+          <template #aside>
             <StatusBadge
               v-if="selectedLocale"
               :value="selectedLocale.effectiveStatus || selectedLocale.publicationStatus"
             />
-          </header>
+          </template>
 
           <div v-if="selectedLocale" class="workspace-form">
             <div class="workspace-summary">
@@ -375,7 +449,7 @@ onMounted(refresh)
               </div>
             </div>
 
-            <div class="flex flex-wrap gap-2">
+            <div class="workspace-inline-actions">
               <el-button type="success" plain @click="makeDefault">Set as default</el-button>
               <el-button type="warning" plain @click="toggleActive">
                 {{ selectedLocale?.isActive ? 'Disable locale' : 'Enable locale' }}
@@ -400,107 +474,8 @@ onMounted(refresh)
           <p v-else class="workspace-empty">
             Select a locale to manage default behavior, activation, and publishing workflow.
           </p>
-        </article>
+        </WorkspacePanel>
       </section>
     </div>
   </PageWrapper>
 </template>
-
-<style scoped>
-.workspace-shell,
-.workspace-form,
-.workspace-summary {
-  display: grid;
-  gap: 1rem;
-}
-
-.workspace-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.workspace-panel {
-  padding: 1.2rem;
-}
-
-.workspace-panel__header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.9rem;
-  margin-bottom: 1rem;
-}
-
-.workspace-eyebrow {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--fcc-secondary-700);
-}
-
-.workspace-form__grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.workspace-form__actions,
-.workspace-toggle-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.workspace-search {
-  width: min(100%, 24rem);
-}
-
-.workspace-table {
-  min-height: 24rem;
-}
-
-.workspace-link {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  font: inherit;
-  color: var(--fcc-primary-800);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.workspace-summary__row {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-bottom: 0.85rem;
-  border-bottom: 1px solid var(--fcc-border);
-}
-
-.workspace-summary__row span {
-  color: var(--fcc-text-muted);
-}
-
-.workspace-summary__row strong {
-  text-align: right;
-  color: var(--fcc-text);
-}
-
-.workspace-empty {
-  color: var(--fcc-text-muted);
-}
-
-@media (min-width: 1024px) {
-  .workspace-grid {
-    grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
-  }
-
-  .workspace-grid--bottom {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  }
-
-  .workspace-form__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-</style>

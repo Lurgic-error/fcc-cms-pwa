@@ -1,6 +1,11 @@
 <script setup>
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
 import { visitorsAPI } from '@/api'
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
 import OverviewChartCard from '@/components/enterprise/OverviewChartCard.vue'
 import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import {
@@ -11,7 +16,8 @@ import {
   buildTopPagesSeries,
   buildVisitTrendSeries,
 } from '@/utils/visitorAnalytics'
-import { computed, onMounted, reactive, ref } from 'vue'
+
+const router = useRouter()
 
 const loading = ref(false)
 const loadError = ref('')
@@ -40,6 +46,8 @@ const filters = reactive({
   days: 30,
   limit: 8,
 })
+
+const headerActions = Object.freeze([{ key: 'refreshAnalytics', label: 'Refresh analytics' }])
 
 function fulfilled(result) {
   return result.status === 'fulfilled' && !result.value?.error ? result.value : null
@@ -71,18 +79,39 @@ const localeSeries = computed(() =>
 const returnVisitorSeries = computed(() => buildReturnVisitorSeries(visitors.value))
 const activeSessionSeries = computed(() => buildActiveSessionSeries(visitors.value))
 
-const biggestDay = computed(() => {
-  return visitTrendSeries.value.reduce((best, item) => (item.value > best.value ? item : best), {
+const biggestDay = computed(() =>
+  visitTrendSeries.value.reduce((best, item) => (item.value > best.value ? item : best), {
     label: 'No activity yet',
     value: 0,
-  })
-})
+  }),
+)
 
 const strongestPath = computed(() => topPagesSeries.value[0]?.fullLabel || 'No tracked path yet')
 const strongestSource = computed(() => referrerSeries.value[0]?.label || 'Direct / unknown')
 const generatedAt = computed(() =>
   summary.value.generatedAt ? new Date(summary.value.generatedAt).toLocaleString() : '-',
 )
+
+const insightCards = computed(() => [
+  {
+    key: 'busiest-day',
+    eyebrow: 'Busiest recent day',
+    title: biggestDay.value.label,
+    description: `${Number(biggestDay.value.value || 0).toLocaleString()} tracked events`,
+  },
+  {
+    key: 'strongest-path',
+    eyebrow: 'Strongest landing path',
+    title: strongestPath.value,
+    description: 'Most active destination in the selected visitor window.',
+  },
+  {
+    key: 'strongest-source',
+    eyebrow: 'Strongest source',
+    title: strongestSource.value,
+    description: `Generated at ${generatedAt.value}.`,
+  },
+])
 
 async function loadAnalytics() {
   loading.value = true
@@ -122,61 +151,76 @@ async function loadAnalytics() {
   loading.value = false
 }
 
+async function onHeaderAction(action) {
+  if (action?.key === 'refreshAnalytics') {
+    await loadAnalytics()
+  }
+}
+
+async function goBack() {
+  await router.push({ name: 'dashboard.overview' })
+}
+
 onMounted(loadAnalytics)
 </script>
 
 <template>
-  <PageWrapper
-    title="Dashboard Analytics"
-    description="A visitor-first analytics workspace for live traffic, paths, sources, and engagement patterns."
-  >
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Visitor analytics"
+        title="Dashboard Analytics"
+        description="A visitor-first analytics workspace for live traffic, paths, sources, and engagement patterns."
+        :actions="headerActions"
+        :loading="loading"
+        back-label="Back to dashboard"
+        @select="onHeaderAction"
+        @back="goBack"
+      />
+    </template>
+
     <div class="analytics-shell">
       <el-alert v-if="loadError" type="warning" show-icon :closable="false" :title="loadError" />
 
-      <section class="analytics-hero surface-card">
-        <div>
-          <p class="analytics-eyebrow">Website intelligence</p>
-          <h2 class="analytics-hero__title">Traffic patterns at a glance</h2>
-          <p class="analytics-hero__description">
-            This view focuses on visitor behavior: where traffic is landing, who is returning, and
-            which sources are actively driving the public website.
-          </p>
-        </div>
-
-        <div class="analytics-hero__actions">
-          <el-select v-model="filters.days" class="w-36">
-            <el-option :value="7" label="7 days" />
-            <el-option :value="14" label="14 days" />
-            <el-option :value="30" label="30 days" />
-            <el-option :value="90" label="90 days" />
-          </el-select>
-          <el-select v-model="filters.limit" class="w-36">
-            <el-option :value="5" label="Top 5" />
-            <el-option :value="8" label="Top 8" />
-            <el-option :value="10" label="Top 10" />
-          </el-select>
-          <el-button type="primary" :loading="loading" @click="loadAnalytics">Refresh</el-button>
-        </div>
-      </section>
+      <WorkspacePanel
+        class="analytics-hero"
+        eyebrow="Website intelligence"
+        title="Traffic patterns at a glance"
+        description="This view focuses on visitor behavior: where traffic is landing, who is returning, and which sources are actively driving the public website."
+      >
+        <template #actions>
+          <div class="analytics-hero__actions">
+            <el-select v-model="filters.days" size="large" class="analytics-hero__select">
+              <el-option :value="7" label="7 days" />
+              <el-option :value="14" label="14 days" />
+              <el-option :value="30" label="30 days" />
+              <el-option :value="90" label="90 days" />
+            </el-select>
+            <el-select v-model="filters.limit" size="large" class="analytics-hero__select">
+              <el-option :value="5" label="Top 5" />
+              <el-option :value="8" label="Top 8" />
+              <el-option :value="10" label="Top 10" />
+            </el-select>
+            <el-button type="primary" size="large" :loading="loading" @click="loadAnalytics">
+              Refresh
+            </el-button>
+          </div>
+        </template>
+      </WorkspacePanel>
 
       <OverviewStatsGrid :stats="stats" />
 
       <section class="analytics-insights">
-        <article class="analytics-insight-card surface-card">
-          <span>Busiest recent day</span>
-          <strong>{{ biggestDay.label }}</strong>
-          <p>{{ Number(biggestDay.value || 0).toLocaleString() }} tracked events</p>
-        </article>
-        <article class="analytics-insight-card surface-card">
-          <span>Strongest landing path</span>
-          <strong :title="strongestPath">{{ strongestPath }}</strong>
-          <p>Most active destination in the selected visitor window</p>
-        </article>
-        <article class="analytics-insight-card surface-card">
-          <span>Strongest source</span>
-          <strong>{{ strongestSource }}</strong>
-          <p>Generated at {{ generatedAt }}</p>
-        </article>
+        <WorkspacePanel
+          v-for="card in insightCards"
+          :key="card.key"
+          tag="article"
+          class="analytics-insight-card"
+          :eyebrow="card.eyebrow"
+          :title="card.title"
+          :description="card.description"
+          heading-level="h3"
+        />
       </section>
 
       <div class="analytics-grid">
@@ -238,112 +282,3 @@ onMounted(loadAnalytics)
     </div>
   </PageWrapper>
 </template>
-
-<style scoped>
-.analytics-shell {
-  display: grid;
-  gap: 1rem;
-}
-
-.analytics-hero {
-  display: grid;
-  gap: 1rem;
-  padding: 1.35rem;
-  background:
-    radial-gradient(circle at top right, rgba(20, 184, 166, 0.18), transparent 26%),
-    radial-gradient(circle at bottom left, rgba(14, 165, 233, 0.12), transparent 32%),
-    linear-gradient(135deg, color-mix(in srgb, var(--fcc-surface) 98%, white), #effcf9);
-}
-
-.analytics-eyebrow {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--fcc-secondary-700);
-}
-
-.analytics-hero__title {
-  margin-top: 0.35rem;
-  font-size: clamp(1.5rem, 2.3vw, 2.15rem);
-}
-
-.analytics-hero__description {
-  margin-top: 0.4rem;
-  max-width: 42rem;
-  color: var(--fcc-text-muted);
-}
-
-.analytics-hero__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  align-items: start;
-}
-
-.analytics-insights {
-  display: grid;
-  gap: 1rem;
-}
-
-.analytics-insight-card {
-  padding: 1.05rem 1.1rem;
-  display: grid;
-  gap: 0.35rem;
-}
-
-.analytics-insight-card span {
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--fcc-text-muted);
-}
-
-.analytics-insight-card strong {
-  font-size: 1.1rem;
-  color: var(--fcc-text);
-}
-
-.analytics-insight-card p {
-  color: var(--fcc-text-muted);
-}
-
-.analytics-grid {
-  display: grid;
-  gap: 1rem;
-  grid-template-columns: minmax(0, 1fr);
-  grid-auto-flow: dense;
-}
-
-.analytics-card {
-  min-width: 0;
-  min-height: 100%;
-}
-
-@media (min-width: 900px) {
-  .analytics-hero {
-    grid-template-columns: minmax(0, 1.4fr) auto;
-    align-items: end;
-  }
-
-  .analytics-insights {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .analytics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .analytics-card--trend,
-  .analytics-card--paths {
-    grid-column: span 2;
-  }
-}
-
-@media (min-width: 1280px) {
-  .analytics-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-</style>

@@ -57,6 +57,7 @@ function createPhilosophy(initialValue = {}) {
     description: createLocalizedField(
       initialValue?.description || initialValue?.content || initialValue?.statement,
     ),
+    coverImage: extractMediaFieldValue(initialValue?.coverImage),
   }
 }
 
@@ -72,13 +73,13 @@ function createMandate(initialValue = null) {
       items:
         Array.isArray(initialValue.mandates) && initialValue.mandates.length
           ? initialValue.mandates.map((item) => createLocalizedListItem(item))
-          : [createLocalizedListItem()],
+          : [],
     }
   }
 
   return {
     description: createLocalizedField(initialValue),
-    items: [createLocalizedListItem()],
+    items: [],
   }
 }
 
@@ -125,50 +126,42 @@ export function createCommissionWizardForm() {
     commissionerStatement: createLocalizedField(),
     dgStatement: createLocalizedField(),
     coverImage: null,
-    galleryImages: [createGalleryImage()],
+    galleryImages: [],
     organizationStructure: {
       title: createLocalizedField(),
       description: createLocalizedField(),
       imageAlt: createLocalizedField(),
       image: null,
     },
-    commissionFunctions: [createCommissionFunction()],
+    commissionFunctions: [],
     directorGeneral: createDirectorGeneral(),
-    coreFunctions: [createCoreFunction()],
-    philosophies: [createPhilosophy()],
+    coreFunctions: [],
+    philosophies: [],
   }
 }
 
 function normalizeGalleryImages(images = []) {
-  const mapped = Array.isArray(images)
+  return Array.isArray(images)
     ? images.map((image) => createGalleryImage(image)).filter((image) => hasValue(image.image))
     : []
-
-  return mapped.length ? mapped : [createGalleryImage()]
 }
 
 function normalizeCommissionFunctions(items = []) {
-  const mapped = Array.isArray(items)
+  return Array.isArray(items)
     ? items.map((item) => createCommissionFunction(item)).filter((item) => hasValue(item))
     : []
-
-  return mapped.length ? mapped : [createCommissionFunction()]
 }
 
 function normalizeCoreFunctions(items = []) {
-  const mapped = Array.isArray(items)
+  return Array.isArray(items)
     ? items.map((item) => createCoreFunction(item)).filter((item) => hasValue(item))
     : []
-
-  return mapped.length ? mapped : [createCoreFunction()]
 }
 
 function normalizePhilosophies(items = []) {
-  const mapped = Array.isArray(items)
+  return Array.isArray(items)
     ? items.map((item) => createPhilosophy(item)).filter((item) => hasValue(item))
     : []
-
-  return mapped.length ? mapped : [createPhilosophy()]
 }
 
 export function mapCommissionToWizardForm(record = {}) {
@@ -290,8 +283,11 @@ export function buildCommissionWizardPayload(form = createCommissionWizardForm()
           : {}),
         title: buildLocalizedValue(item?.title?.en, item?.title?.sw),
         description: buildLocalizedValue(item?.description?.en, item?.description?.sw),
+        coverImage: buildMediaValue(item?.coverImage),
       }))
-      .filter((item) => hasValue(item?.title) || hasValue(item?.description)),
+      .filter(
+        (item) => hasValue(item?.title) || hasValue(item?.description) || hasValue(item?.coverImage),
+      ),
   }
 }
 

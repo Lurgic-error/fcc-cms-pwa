@@ -1,8 +1,9 @@
 {
   "app": {
-    "title": "FCC CMS PWA",
+    "title": "Fair Competition Commission",
     "shortTitle": "FCC CMS",
-    "description": "Enterprise multilingual content operations platform",
+    "description": "Content management workspace for multilingual editorial operations.",
+    "organizationName": "Fair Competition Commission",
     "workspace": "Editorial Workspace"
   },
   "common": {
@@ -24,7 +25,11 @@
   },
   "auth": {
     "loginTitle": "Sign In",
-    "loginSubtitle": "Access the FCC editorial workspace using your organization account.",
+    "loginSubtitle": "Access the editorial workspace using your organization account.",
+    "trustedAccessTitle": "Trusted Access",
+    "trustedAccessBody": "Secure sign in for Fair Competition Commission staff and content teams.",
+    "unifiedWorkspaceTitle": "Unified Workspace",
+    "unifiedWorkspaceBody": "Manage publication workflows across the Fair Competition Commission from one secure platform.",
     "email": "Email",
     "emailPlaceholder": "name{'@'}fcc.go.tz",
     "password": "Password",

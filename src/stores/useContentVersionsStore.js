@@ -11,9 +11,11 @@ export const useContentVersionsStore = defineStore('cms-content-versions', () =>
   })
 
   async function createForItem(contentItemId, payload = {}) {
-    const res = await contentManagementAPI.createContentVersionForItem(contentItemId, payload)
-    if (res?.error) throw new Error(res.error)
-    return res?.contentVersion || res
+    return base.withAsync(async () => {
+      const res = await contentManagementAPI.createContentVersionForItem(contentItemId, payload)
+      if (res?.error) base.handleError(res)
+      return base.setEntityState(res?.contentVersion || res)
+    })
   }
 
   return {

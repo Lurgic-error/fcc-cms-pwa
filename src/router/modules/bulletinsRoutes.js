@@ -29,7 +29,7 @@ export default [
         }),
         meta: {
           ...requirePermission([PERMISSIONS.PUBLISH]),
-          roles: [ROLES.PUBLISHER, ROLES.ADMIN],
+          roles: [ROLES.PUBLISHER],
           type: 'schedule',
           breadcrumb: { label: 'Article Schedule', i18nKey: 'breadcrumbs.schedule' },
           page: { title: 'Article Schedule' },

@@ -1,8 +1,9 @@
 {
   "app": {
-    "title": "FCC CMS PWA",
+    "title": "Fair Competition Commission",
     "shortTitle": "FCC CMS",
-    "description": "Jukwaa la kitaasisi la usimamizi wa maudhui ya lugha nyingi",
+    "description": "Mfumo wa usimamizi wa maudhui kwa shughuli za uhariri wa lugha nyingi.",
+    "organizationName": "Fair Competition Commission",
     "workspace": "Sehemu ya Uhariri"
   },
   "common": {
@@ -24,7 +25,11 @@
   },
   "auth": {
     "loginTitle": "Ingia",
-    "loginSubtitle": "Fikia mfumo wa uhariri wa FCC kwa akaunti ya taasisi.",
+    "loginSubtitle": "Fikia sehemu ya uhariri kwa akaunti ya taasisi.",
+    "trustedAccessTitle": "Ufikiaji Salama",
+    "trustedAccessBody": "Ingia kwa usalama kwa watumishi na timu za maudhui za Fair Competition Commission.",
+    "unifiedWorkspaceTitle": "Sehemu Moja ya Kazi",
+    "unifiedWorkspaceBody": "Simamia mtiririko wa machapisho ndani ya Fair Competition Commission kutoka sehemu moja salama.",
     "email": "Barua Pepe",
     "emailPlaceholder": "jina@fcc.go.tz",
     "password": "Nenosiri",

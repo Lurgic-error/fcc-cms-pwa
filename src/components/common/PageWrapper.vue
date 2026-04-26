@@ -34,33 +34,3 @@ const hasHeader = computed(() => Boolean(props.title || props.description || slo
     </div>
   </section>
 </template>
-
-<style scoped>
-.page-wrapper {
-  display: grid;
-  gap: 1rem;
-  padding: 0.2rem;
-}
-
-.page-wrapper.dense {
-  gap: 0.7rem;
-}
-
-.page-header {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.page-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-}
-
-.page-description {
-  font-size: 0.92rem;
-}
-
-.page-content {
-  min-width: 0;
-}
-</style>

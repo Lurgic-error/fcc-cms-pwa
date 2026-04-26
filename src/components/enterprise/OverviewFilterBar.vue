@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import AppSearchField from '@/components/common/AppSearchField.vue'
 
 const props = defineProps({
@@ -7,6 +8,10 @@ const props = defineProps({
   searchPlaceholder: { type: String, default: 'Search records' },
   filterFields: { type: Array, default: () => [] },
   filterValues: { type: Object, default: () => ({}) },
+  applyLabel: { type: String, default: 'Apply' },
+  resetLabel: { type: String, default: 'Clear filters' },
+  error: { type: String, default: '' },
+  framed: { type: Boolean, default: true },
   loading: { type: Boolean, default: false },
 })
 
@@ -18,18 +23,37 @@ function updateFilter(key, value) {
     [key]: value,
   })
 }
+
+const layoutStyle = computed(() => {
+  const fieldCount = Array.isArray(props.filterFields) ? props.filterFields.length : 0
+
+  return {
+    '--overview-filter-template':
+      fieldCount > 0
+        ? `minmax(0, 1.5fr) repeat(${fieldCount}, minmax(11rem, 1fr)) auto`
+        : 'minmax(0, 1fr) auto',
+  }
+})
 </script>
 
 <template>
-  <section class="surface-card overview-filter-bar">
-    <AppFormRow :columns="Math.max(2, filterFields.length + 2)">
-      <AppSearchField
-        :model-value="searchQuery"
-        :label="searchLabel"
-        :placeholder="searchPlaceholder"
-        :disabled="loading"
-        @update:model-value="$emit('update:searchQuery', $event)"
-      />
+  <section
+    class="overview-filter-bar"
+    :class="{
+      'surface-card': framed,
+      'overview-filter-bar--bare': !framed,
+    }"
+  >
+    <div class="overview-filter-bar__grid" :style="layoutStyle">
+      <div class="overview-filter-bar__search">
+        <AppSearchField
+          :model-value="searchQuery"
+          :label="searchLabel"
+          :placeholder="searchPlaceholder"
+          :disabled="loading"
+          @update:model-value="$emit('update:searchQuery', $event)"
+        />
+      </div>
 
       <template v-for="field in filterFields" :key="field.key">
         <label class="overview-filter-bar__field">
@@ -41,7 +65,6 @@ function updateFilter(key, value) {
             :placeholder="field.placeholder || field.label"
             clearable
             size="large"
-            class="w-full"
             @update:model-value="updateFilter(field.key, $event)"
           >
             <el-option
@@ -58,7 +81,6 @@ function updateFilter(key, value) {
             type="date"
             value-format="YYYY-MM-DD"
             size="large"
-            class="w-full"
             :placeholder="field.placeholder || field.label"
             @update:model-value="updateFilter(field.key, $event)"
           />
@@ -74,47 +96,22 @@ function updateFilter(key, value) {
       </template>
 
       <div class="overview-filter-bar__actions">
-        <el-button plain :disabled="loading" @click="$emit('reset')">Clear filters</el-button>
-        <el-button type="primary" :loading="loading" @click="$emit('apply')">Apply</el-button>
+        <el-button size="large" plain :disabled="loading" @click="$emit('reset')">
+          {{ resetLabel }}
+        </el-button>
+        <el-button size="large" type="primary" :loading="loading" @click="$emit('apply')">
+          {{ applyLabel }}
+        </el-button>
       </div>
-    </AppFormRow>
+    </div>
+
+    <el-alert
+      v-if="error"
+      :title="error"
+      type="error"
+      show-icon
+      :closable="false"
+      class="overview-filter-bar__alert"
+    />
   </section>
 </template>
-
-<style scoped>
-.overview-filter-bar {
-  padding: 1rem;
-}
-
-.overview-filter-bar__field {
-  display: grid;
-  gap: 0.45rem;
-  min-width: 0;
-}
-
-.overview-filter-bar__label {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--fcc-text-muted);
-}
-
-.overview-filter-bar__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  align-items: end;
-}
-
-.overview-filter-bar :deep(.el-input__wrapper),
-.overview-filter-bar :deep(.el-select__wrapper),
-.overview-filter-bar :deep(.el-date-editor.el-input) {
-  border-radius: var(--fcc-radius-pill) !important;
-}
-
-.overview-filter-bar :deep(.el-input__wrapper) {
-  padding-inline: 1.25rem;
-}
-</style>

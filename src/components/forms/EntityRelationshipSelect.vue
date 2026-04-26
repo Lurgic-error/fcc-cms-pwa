@@ -108,11 +108,11 @@ watch(
   <el-select
     :model-value="modelValue"
     :placeholder="field.placeholder || 'Select option'"
+    size="large"
     :loading="loading"
     :disabled="disabled"
     filterable
     clearable
-    class="w-full"
     @update:model-value="emit('update:modelValue', $event)"
   >
     <el-option

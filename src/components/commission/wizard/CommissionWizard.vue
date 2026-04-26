@@ -1,16 +1,14 @@
 <script setup>
 import PageWrapper from '@/components/common/PageWrapper.vue'
+import FormWizardLayout from '@/components/forms/FormWizardLayout.vue'
 import { useCommissionWizard } from '@/composables/useCommissionWizard'
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-import CommissionWizardActions from './CommissionWizardActions.vue'
-import CommissionWizardSidebar from './CommissionWizardSidebar.vue'
 import CommissionWizardStepBasicProfile from './CommissionWizardStepBasicProfile.vue'
 import CommissionWizardStepCTA from './CommissionWizardStepCTA.vue'
 import CommissionWizardStepCoreFunctions from './CommissionWizardStepCoreFunctions.vue'
 import CommissionWizardStepDirectorGeneral from './CommissionWizardStepDirectorGeneral.vue'
-import CommissionWizardStepHeader from './CommissionWizardStepHeader.vue'
 import CommissionWizardStepHistory from './CommissionWizardStepHistory.vue'
 import CommissionWizardStepIntroduction from './CommissionWizardStepIntroduction.vue'
 import CommissionWizardStepMandate from './CommissionWizardStepMandate.vue'
@@ -27,7 +25,6 @@ const {
   form,
   currentStep,
   currentStepKey,
-  currentStepMeta,
   pageTitle,
   pageDescription,
   loading,
@@ -41,7 +38,6 @@ const {
   loadCommission,
   registerStepRef,
   goToStep,
-  nextStep,
   previousStep,
   saveStep,
   saveAndContinue,
@@ -65,7 +61,6 @@ const stepComponents = Object.freeze({
 const currentComponent = computed(
   () => stepComponents[currentStepKey.value] || CommissionWizardStepReview,
 )
-const currentState = computed(() => stepStates.value[currentStep.value] || stepStates.value[0])
 
 const currentComponentProps = computed(() => {
   if (currentStepKey.value === 'review') {
@@ -80,6 +75,10 @@ const currentComponentProps = computed(() => {
     form,
   }
 })
+
+const wizardLoading = computed(
+  () => bootstrapping.value || loading.value || savingCurrentStep.value,
+)
 
 async function finishWizard() {
   const saved = await saveStep('review')
@@ -101,119 +100,63 @@ onMounted(bootstrap)
 </script>
 
 <template>
-  <PageWrapper :title="pageTitle" :description="pageDescription">
-    <div class="commission-wizard-shell">
-      <CommissionWizardSidebar :steps="stepStates" @jump="goToStep" />
-
-      <section class="commission-wizard-panel">
-        <div class="commission-wizard-panel__toolbar">
-          <el-button plain @click="router.push({ name: 'commission.details' })"
-            >Back to Overview</el-button
-          >
+  <PageWrapper dense>
+    <FormWizardLayout
+      :title="pageTitle"
+      :subtitle="pageDescription"
+      :steps="stepStates"
+      :current-step="currentStep"
+      :loading="wizardLoading"
+      :error="loadError"
+      submit-label="Finish Wizard"
+      cancel-label="Back to Overview"
+      save-label="Save Draft"
+      :show-save="true"
+      :lock-future-steps="false"
+      @cancel="router.push({ name: 'commission.details' })"
+      @previous="previousStep"
+      @next="saveAndContinue"
+      @save="saveStep(currentStepKey)"
+      @submit="finishWizard"
+      @jump="goToStep"
+    >
+      <template #header-meta>
+        <div class="commission-wizard-meta">
+          <span class="commission-wizard-meta__badge">
+            {{ stepStates[currentStep]?.saved ? 'Saved' : 'In Progress' }}
+          </span>
         </div>
+      </template>
 
-        <el-skeleton v-if="bootstrapping && loading" :rows="12" animated />
+      <el-skeleton v-if="bootstrapping && loading" :rows="12" animated />
 
-        <template v-else>
-          <CommissionWizardStepHeader
-            :step="currentStepMeta"
-            :index="currentStep"
-            :total-steps="stepStates.length"
-            :saved="currentState?.saved"
-            :complete="currentState?.complete"
-            :error="currentState?.error"
-          />
+      <template v-else>
+        <el-alert
+          v-if="saveError"
+          type="error"
+          show-icon
+          :closable="false"
+          :title="saveError"
+          class="commission-wizard-alert"
+        />
 
-          <el-alert
-            v-if="loadError"
-            type="error"
-            show-icon
-            :closable="false"
-            :title="loadError"
-            class="commission-wizard-alert"
-          />
+        <el-alert
+          v-if="successMessage"
+          type="success"
+          show-icon
+          :closable="false"
+          :title="successMessage"
+          class="commission-wizard-alert"
+        />
 
-          <el-alert
-            v-if="saveError"
-            type="error"
-            show-icon
-            :closable="false"
-            :title="saveError"
-            class="commission-wizard-alert"
-          />
-
-          <el-alert
-            v-if="successMessage"
-            type="success"
-            show-icon
-            :closable="false"
-            :title="successMessage"
-            class="commission-wizard-alert"
-          />
-
-          <div class="commission-wizard-panel__body">
-            <component
-              :is="currentComponent"
-              :key="currentStepKey"
-              v-bind="currentComponentProps"
-              :ref="(instance) => registerStepRef(currentStepKey, instance)"
-              @jump="goToStep"
-            />
-          </div>
-
-          <CommissionWizardActions
-            :is-first="currentStep === 0"
-            :is-last="currentStep === stepStates.length - 1"
-            :saving="savingCurrentStep"
-            @previous="previousStep"
-            @next="nextStep"
-            @save="saveStep(currentStepKey)"
-            @save-and-continue="saveAndContinue"
-            @finish="finishWizard"
-          />
-        </template>
-      </section>
-    </div>
+        <component
+          :is="currentComponent"
+          :key="currentStepKey"
+          v-bind="currentComponentProps"
+          :ref="(instance) => registerStepRef(currentStepKey, instance)"
+          @jump="goToStep"
+        />
+      </template>
+    </FormWizardLayout>
   </PageWrapper>
 </template>
-
-<style scoped>
-.commission-wizard-shell {
-  display: grid;
-  gap: 1rem;
-}
-
-.commission-wizard-panel {
-  display: grid;
-  gap: 1.5rem;
-  padding: 1.5rem;
-  border-radius: var(--fcc-radius-2xl);
-  border: 1px solid var(--fcc-border);
-  background: var(--fcc-surface);
-  box-shadow: var(--fcc-shadow-soft);
-}
-
-.commission-wizard-panel__toolbar {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.commission-wizard-panel__body {
-  min-width: 0;
-}
-
-.commission-wizard-alert {
-  margin-top: -0.4rem;
-}
-
-@media (min-width: 1024px) {
-  .commission-wizard-shell {
-    grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
-    align-items: start;
-  }
-
-  .commission-wizard-panel {
-    padding: 1.35rem;
-  }
-}
-</style>

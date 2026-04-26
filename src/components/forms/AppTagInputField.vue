@@ -38,6 +38,7 @@ const normalizedValue = computed(() => {
 <template>
   <el-input-tag
     :model-value="normalizedValue"
+    size="large"
     collapse-tags
     collapse-tags-tooltip
     :max-collapse-tags="maxCollapseTags"

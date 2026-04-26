@@ -1,12 +1,18 @@
 <script setup>
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
-import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
+import AppFormRow from '@/components/forms/AppFormRow.vue'
+import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import EntityWorkflowButtons from '@/components/workflow/EntityWorkflowButtons.vue'
 import { useLayoutsStore } from '@/stores/useLayoutsStore'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const layoutsStore = useLayoutsStore()
 const { entities: layouts, loading, error, pagination } = storeToRefs(layoutsStore)
 
@@ -44,6 +50,30 @@ const form = reactive({
 
 const selected = computed(() => layouts.value.find((item) => item.layoutId === selectedId.value))
 
+const stats = computed(() => [
+  { key: 'total', label: 'Layouts', value: layouts.value.length },
+  {
+    key: 'active',
+    label: 'Active',
+    value: layouts.value.filter((item) => item?.isActive !== false).length,
+  },
+  {
+    key: 'published',
+    label: 'Published',
+    value: layouts.value.filter((item) => resolveStatus(item) === 'published').length,
+  },
+  {
+    key: 'regions',
+    label: 'Defined Regions',
+    value: layouts.value.reduce((total, item) => total + countRegions(item), 0),
+  },
+])
+
+const headerActions = Object.freeze([
+  { key: 'refresh', label: 'Refresh workspace' },
+  { key: 'create', label: 'New layout' },
+])
+
 function parseJson(value, fallback = []) {
   try {
     const parsed = JSON.parse(value)
@@ -53,6 +83,14 @@ function parseJson(value, fallback = []) {
   }
 }
 
+function resolveStatus(item = {}) {
+  return item?.effectiveStatus || item?.publicationStatus || 'draft'
+}
+
+function countRegions(item = {}) {
+  return Array.isArray(item?.regions) ? item.regions.length : 0
+}
+
 function loadForm(item) {
   form.name = item?.name || ''
   form.description = item?.description || ''
@@ -60,8 +98,11 @@ function loadForm(item) {
   form.isActive = item?.isActive !== false
 }
 
-function clearForm() {
+function clearForm({ preserveFeedback = false } = {}) {
   selectedId.value = ''
+  if (!preserveFeedback) {
+    feedback.value = ''
+  }
   loadForm(null)
 }
 
@@ -103,7 +144,7 @@ async function save() {
   }
 
   await refresh()
-  clearForm()
+  clearForm({ preserveFeedback: true })
 }
 
 async function runWorkflow(action) {
@@ -118,180 +159,184 @@ async function runWorkflow(action) {
   if (action === 'archive') await layoutsStore.archive(id, 'Archived from layouts screen')
   if (action === 'restore') await layoutsStore.restore(id)
   if (action === 'restoreArchived') await layoutsStore.restoreArchived(id)
-  if (action === 'softDelete') await layoutsStore.softDelete(id, 'Soft deleted from layouts screen')
+  if (action === 'softDelete')
+    await layoutsStore.softDelete(id, 'Soft deleted from layouts screen')
   if (action === 'delete') await layoutsStore.remove(id)
 
   await refresh()
+}
+
+async function goBack() {
+  await router.push({ name: 'contentManagement.overview' })
+}
+
+async function onHeaderAction(action) {
+  if (action?.key === 'refresh') {
+    await refresh()
+    return
+  }
+
+  if (action?.key === 'create') {
+    clearForm()
+  }
 }
 
 onMounted(refresh)
 </script>
 
 <template>
-  <PageWrapper class="page">
-    <div class="toolbar">
-      <h1>Layouts</h1>
-      <div class="toolbar-actions">
-        <button class="btn btn-muted" type="button" @click="refresh">Refresh</button>
-        <button class="btn btn-muted" type="button" @click="clearForm">New</button>
-      </div>
-    </div>
-
-    <AppBentoGrid columns="2">
-      <section class="card">
-        <h2>{{ selectedId ? 'Edit Layout' : 'Create Layout' }}</h2>
-        <form class="form" @submit.prevent="save">
-          <label>Name <input v-model="form.name" type="text" required /></label>
-          <label>Description <input v-model="form.description" type="text" /></label>
-          <label>Regions (JSON Array) <textarea v-model="form.regionsJson" rows="12" /></label>
-          <label><input v-model="form.isActive" type="checkbox" /> Active</label>
-          <button class="btn btn-primary" type="submit" :disabled="loading">
-            {{ loading ? 'Saving...' : selectedId ? 'Update Layout' : 'Create Layout' }}
-          </button>
-          <p v-if="feedback" class="feedback">{{ feedback }}</p>
-          <p v-if="error" class="error">{{ error }}</p>
-        </form>
-      </section>
-
-      <section class="card">
-        <h2>Layouts</h2>
-        <p v-if="loading">Loading layouts...</p>
-        <p v-else-if="!layouts.length">No layouts found.</p>
-        <table v-else class="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Regions</th>
-              <th>Active</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in layouts"
-              :key="item.layoutId"
-              :class="{ selected: item.layoutId === selectedId }"
-              @click="selectLayout(item)"
-            >
-              <td>{{ item.name }}</td>
-              <td>{{ Array.isArray(item.regions) ? item.regions.length : 0 }}</td>
-              <td>{{ item.isActive ? 'Yes' : 'No' }}</td>
-              <td>{{ item.publicationStatus || 'draft' }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <TablePagination
-          v-if="layouts.length"
-          :pagination="pagination"
-          :loading="loading"
-          @update:page="setPage"
-          @update:limit="setLimit"
-        />
-      </section>
-    </AppBentoGrid>
-
-    <section class="card">
-      <h2>Workflow Actions</h2>
-      <EntityWorkflowButtons
-        :disabled="!selected"
-        @submit="runWorkflow('submit')"
-        @approve="runWorkflow('approve')"
-        @reject="runWorkflow('reject')"
-        @publish="runWorkflow('publish')"
-        @unpublish="runWorkflow('unpublish')"
-        @archive="runWorkflow('archive')"
-        @restore="runWorkflow('restore')"
-        @restore-archived="runWorkflow('restoreArchived')"
-        @soft-delete="runWorkflow('softDelete')"
-        @delete="runWorkflow('delete')"
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Content Workspace"
+        title="Layouts"
+        description="Shape reusable page regions and allowed content structure from one editorial layout workspace."
+        :actions="headerActions"
+        :loading="loading"
+        @select="onHeaderAction"
+        @back="goBack"
       />
-    </section>
+    </template>
+
+    <div class="workspace-shell">
+      <OverviewStatsGrid :stats="stats" />
+
+      <section class="workspace-grid">
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Layout editor"
+          :title="selectedId ? 'Update this layout' : 'Create a new layout'"
+        >
+          <el-form label-position="top" class="workspace-form" @submit.prevent="save">
+            <AppFormRow :columns="2">
+              <el-form-item label="Name" required class="form-item-flush">
+                <el-input v-model="form.name" />
+              </el-form-item>
+              <el-form-item label="Description" class="form-item-flush">
+                <el-input v-model="form.description" />
+              </el-form-item>
+            </AppFormRow>
+
+            <el-form-item label="Regions (JSON Array)" class="form-item-flush">
+              <el-input v-model="form.regionsJson" type="textarea" :rows="12" />
+            </el-form-item>
+
+            <div class="workspace-toggle-row">
+              <el-checkbox v-model="form.isActive">Active</el-checkbox>
+            </div>
+
+            <div class="workspace-form__actions">
+              <el-button size="large" plain @click="clearForm">Clear</el-button>
+              <el-button size="large" type="primary" native-type="submit" :loading="loading">
+                {{ selectedId ? 'Save layout' : 'Create layout' }}
+              </el-button>
+            </div>
+
+            <el-alert
+              v-if="feedback"
+              type="success"
+              show-icon
+              :closable="false"
+              :title="feedback"
+            />
+            <el-alert v-if="error" type="error" show-icon :closable="false" :title="error" />
+          </el-form>
+        </WorkspacePanel>
+
+        <WorkspacePanel tag="article" eyebrow="Layout library" title="Browse registered layouts">
+          <template #aside>
+            <StatusBadge v-if="selected" :value="resolveStatus(selected)" />
+          </template>
+          <div class="workspace-table workspace-table--scroll">
+            <el-table
+              :data="layouts"
+              row-key="layoutId"
+              stripe
+              highlight-current-row
+              :current-row-key="selectedId"
+              v-loading="loading"
+              @row-click="selectLayout"
+            >
+              <el-table-column prop="name" label="Name" min-width="200" />
+              <el-table-column label="Regions" min-width="120">
+                <template #default="{ row }">
+                  {{ countRegions(row) }}
+                </template>
+              </el-table-column>
+              <el-table-column label="Active" min-width="120">
+                <template #default="{ row }">
+                  <el-tag :type="row.isActive ? 'success' : 'info'" effect="plain">
+                    {{ row.isActive ? 'Active' : 'Inactive' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="Status" min-width="140">
+                <template #default="{ row }">
+                  <StatusBadge :value="resolveStatus(row)" />
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <TablePagination
+            v-if="layouts.length"
+            :pagination="pagination"
+            :loading="loading"
+            @update:page="setPage"
+            @update:limit="setLimit"
+          />
+        </WorkspacePanel>
+      </section>
+
+      <section class="workspace-grid workspace-grid--bottom">
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Selected layout"
+          :title="selected?.name || 'Choose a layout from the library'"
+        >
+          <template #aside>
+            <StatusBadge v-if="selected" :value="resolveStatus(selected)" />
+          </template>
+          <div v-if="selected" class="workspace-summary">
+            <div class="workspace-summary__row">
+              <span>Description</span>
+              <strong>{{ selected.description || 'No description yet' }}</strong>
+            </div>
+            <div class="workspace-summary__row">
+              <span>Defined regions</span>
+              <strong>{{ countRegions(selected) }}</strong>
+            </div>
+            <div class="workspace-summary__row">
+              <span>Lifecycle</span>
+              <strong>{{ selected.isActive ? 'Active' : 'Inactive' }}</strong>
+            </div>
+          </div>
+
+          <p v-else class="workspace-empty">
+            Select a layout to review how many regions it exposes and whether it is ready for use.
+          </p>
+        </WorkspacePanel>
+
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Workflow"
+          title="Submit, approve, archive, or restore"
+        >
+          <EntityWorkflowButtons
+            :disabled="!selected"
+            @submit="runWorkflow('submit')"
+            @approve="runWorkflow('approve')"
+            @reject="runWorkflow('reject')"
+            @publish="runWorkflow('publish')"
+            @unpublish="runWorkflow('unpublish')"
+            @archive="runWorkflow('archive')"
+            @restore="runWorkflow('restore')"
+            @restore-archived="runWorkflow('restoreArchived')"
+            @soft-delete="runWorkflow('softDelete')"
+            @delete="runWorkflow('delete')"
+          />
+        </WorkspacePanel>
+      </section>
+    </div>
   </PageWrapper>
 </template>
-
-<style scoped>
-.page {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.toolbar,
-.toolbar-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.card {
-  border: 1px solid var(--color-fcc-border);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  background: var(--color-surface);
-}
-
-.form {
-  display: grid;
-  gap: 0.6rem;
-}
-
-label {
-  display: grid;
-  gap: 0.3rem;
-}
-
-input,
-textarea {
-  border: 1px solid var(--color-secondary-300);
-  border-radius: 0.375rem;
-  padding: 0.45rem 0.55rem;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
-  border: 1px solid var(--color-fcc-border);
-  padding: 0.45rem;
-  text-align: left;
-  font-size: 0.86rem;
-}
-
-.table tbody tr {
-  cursor: pointer;
-}
-
-.table tbody tr.selected {
-  background: var(--color-secondary-50);
-}
-
-.btn {
-  border: 1px solid var(--color-secondary-300);
-  border-radius: 0.375rem;
-  padding: 0.45rem 0.7rem;
-  background: var(--color-surface);
-  cursor: pointer;
-}
-
-.btn-primary {
-  border-color: var(--color-primary-600);
-  background: var(--color-primary-600);
-  color: var(--color-surface);
-}
-
-.btn-muted {
-  background: var(--color-surface-muted);
-}
-
-.feedback {
-  color: var(--color-primary-600);
-}
-
-.error {
-  color: var(--color-danger);
-}
-</style>

@@ -50,7 +50,7 @@ export default [
         component: () => import('@/pages/publications/PublicationCreatePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.CREATE]),
-          roles: [ROLES.ADMIN, ROLES.EDITOR],
+          roles: [ROLES.PUBLISHER, ROLES.EDITOR],
           type: 'create',
           breadcrumb: { label: 'Create', i18nKey: 'breadcrumbs.create' },
           page: { title: 'Create Publication', i18nKey: 'pages.publications.create' },
@@ -66,7 +66,7 @@ export default [
         component: () => import('@/pages/publications/PublicationReviewQueuePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.REVIEW]),
-          roles: [ROLES.REVIEWER, ROLES.ADMIN],
+          roles: [ROLES.REVIEWER, ROLES.PUBLISHER],
           type: 'review',
           breadcrumb: { label: 'Review Queue', i18nKey: 'breadcrumbs.reviewQueue' },
           page: { title: 'Publication Review Queue', i18nKey: 'pages.publications.reviewQueue' },
@@ -79,7 +79,7 @@ export default [
         component: () => import('@/pages/publications/PublicationArchivePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.ARCHIVE]),
-          roles: [ROLES.ADMIN],
+          roles: [ROLES.PUBLISHER],
           type: 'archive',
           breadcrumb: { label: 'Archive', i18nKey: 'breadcrumbs.archive' },
           page: { title: 'Publication Archive', i18nKey: 'pages.publications.archive' },
@@ -117,7 +117,7 @@ export default [
             component: () => import('@/pages/publications/PublicationEditPage.vue'),
             meta: {
               ...requirePermission([PERMISSIONS.UPDATE]),
-              roles: [ROLES.ADMIN, ROLES.EDITOR],
+              roles: [ROLES.PUBLISHER, ROLES.EDITOR],
               allowedStates: ['draft', 'rejected'],
               type: 'edit',
               breadcrumb: { label: 'Edit', i18nKey: 'breadcrumbs.edit' },
@@ -131,7 +131,7 @@ export default [
             component: () => import('@/pages/publications/PublicationSchedulePage.vue'),
             meta: {
               ...requirePermission([PERMISSIONS.PUBLISH]),
-              roles: [ROLES.PUBLISHER, ROLES.ADMIN],
+              roles: [ROLES.PUBLISHER],
               allowedStates: ['approved', 'published', 'scheduled', 'unpublished'],
               type: 'schedule',
               breadcrumb: { label: 'Schedule', i18nKey: 'breadcrumbs.schedule' },
@@ -181,7 +181,7 @@ export default [
             component: () => import('@/pages/publications/PublicationCategoryCreatePage.vue'),
             meta: {
               ...requirePermission([PERMISSIONS.CREATE]),
-              roles: [ROLES.ADMIN, ROLES.EDITOR],
+              roles: [ROLES.PUBLISHER, ROLES.EDITOR],
               type: 'create',
               breadcrumb: { label: 'Create', i18nKey: 'breadcrumbs.create' },
               page: { title: 'Create Category', i18nKey: 'pages.publications.categories.create' },
@@ -195,7 +195,7 @@ export default [
             component: () => import('@/pages/publications/PublicationCategoryReviewQueuePage.vue'),
             meta: {
               ...requirePermission([PERMISSIONS.REVIEW]),
-              roles: [ROLES.REVIEWER, ROLES.ADMIN],
+              roles: [ROLES.REVIEWER, ROLES.PUBLISHER],
               type: 'review',
               breadcrumb: { label: 'Review Queue', i18nKey: 'breadcrumbs.reviewQueue' },
               page: {
@@ -212,7 +212,7 @@ export default [
             component: () => import('@/pages/publications/PublicationCategoryArchivePage.vue'),
             meta: {
               ...requirePermission([PERMISSIONS.ARCHIVE]),
-              roles: [ROLES.ADMIN],
+              roles: [ROLES.PUBLISHER],
               type: 'archive',
               breadcrumb: { label: 'Archive', i18nKey: 'breadcrumbs.archive' },
               page: { title: 'Category Archive', i18nKey: 'pages.publications.categories.archive' },
@@ -251,7 +251,7 @@ export default [
                 component: () => import('@/pages/publications/PublicationCategoryEditPage.vue'),
                 meta: {
                   ...requirePermission([PERMISSIONS.UPDATE]),
-                  roles: [ROLES.ADMIN, ROLES.EDITOR],
+                  roles: [ROLES.PUBLISHER, ROLES.EDITOR],
                   allowedStates: ['draft', 'rejected'],
                   type: 'edit',
                   breadcrumb: { label: 'Edit', i18nKey: 'breadcrumbs.edit' },
@@ -265,7 +265,7 @@ export default [
                 component: () => import('@/pages/publications/PublicationCategorySchedulePage.vue'),
                 meta: {
                   ...requirePermission([PERMISSIONS.PUBLISH]),
-                  roles: [ROLES.PUBLISHER, ROLES.ADMIN],
+                  roles: [ROLES.PUBLISHER],
                   allowedStates: ['approved', 'published', 'scheduled', 'unpublished'],
                   type: 'schedule',
                   breadcrumb: { label: 'Schedule', i18nKey: 'breadcrumbs.schedule' },

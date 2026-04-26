@@ -22,30 +22,22 @@ onUpdated(updateCount)
 const gridClass = computed(() => {
   const count = visibleCount.value
 
-  if (props.columns === 1 || count <= 1) return 'grid-cols-1'
-  if (props.columns === 2 || count === 2) return 'grid-cols-1 md:grid-cols-2'
-  if (props.columns === 3 || count === 3) return 'grid-cols-1 md:grid-cols-3'
+  if (props.columns === 1 || count <= 1) return 'detail-grid--1'
+  if (props.columns === 2 || count === 2) return 'detail-grid--2'
+  if (props.columns === 3 || count === 3) return 'detail-grid--3'
 
-  // If count is exactly 4, or columns is exactly 4
-  if (props.columns === 4 || count === 4) return 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4'
+  if (props.columns === 4 || count === 4) return 'detail-grid--4'
 
-  // If count is exactly 5
-  if (count === 5) return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5'
+  if (count === 5) return 'detail-grid--5'
 
-  // If count is exactly 6 or more
-  if (count >= 6) return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6'
+  if (count >= 6) return 'detail-grid--6'
 
-  // Fallback
-  return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+  return 'detail-grid--4'
 })
 </script>
 
 <template>
-  <div
-    ref="containerRef"
-    class="grid gap-x-6 gap-y-6 transition-all duration-300"
-    :class="gridClass"
-  >
+  <div ref="containerRef" class="detail-grid" :class="gridClass">
     <slot />
   </div>
 </template>

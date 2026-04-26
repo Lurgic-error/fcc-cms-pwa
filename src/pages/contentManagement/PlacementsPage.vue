@@ -1,8 +1,12 @@
 <script setup>
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
-import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
+import StatusBadge from '@/components/common/StatusBadge.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
+import AppFormRow from '@/components/forms/AppFormRow.vue'
 import EntityRelationshipSelect from '@/components/forms/EntityRelationshipSelect.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
+import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import EntityWorkflowButtons from '@/components/workflow/EntityWorkflowButtons.vue'
 import { useCmsPagesStore } from '@/stores/useCmsPagesStore'
 import { useContentItemsStore } from '@/stores/useContentItemsStore'
@@ -10,7 +14,9 @@ import { useContentVersionsStore } from '@/stores/useContentVersionsStore'
 import { usePlacementsStore } from '@/stores/usePlacementsStore'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const placementsStore = usePlacementsStore()
 const pagesStore = useCmsPagesStore()
 const contentItemsStore = useContentItemsStore()
@@ -46,6 +52,34 @@ const form = reactive({
 const selected = computed(() =>
   placements.value.find((item) => item.placementId === selectedId.value),
 )
+
+const stats = computed(() => [
+  { key: 'total', label: 'Placements', value: placements.value.length },
+  {
+    key: 'active',
+    label: 'Active',
+    value: placements.value.filter((item) => item?.isActive !== false).length,
+  },
+  {
+    key: 'scheduled',
+    label: 'Scheduled',
+    value: placements.value.filter((item) => Boolean(item?.startAt || item?.endAt)).length,
+  },
+  {
+    key: 'pages',
+    label: 'Pages Covered',
+    value: new Set(placements.value.map((item) => findPageId(item)).filter(Boolean)).size,
+  },
+])
+
+const headerActions = Object.freeze([
+  { key: 'refresh', label: 'Refresh workspace' },
+  { key: 'create', label: 'New placement' },
+])
+
+function resolveStatus(item = {}) {
+  return item?.effectiveStatus || item?.publicationStatus || 'draft'
+}
 
 function resolvePageLabel(item = {}) {
   return item?.name || item?.title || item?.slug || item?.pageId || 'Untitled page'
@@ -214,9 +248,18 @@ function loadForm(item) {
   form.endAt = item?.endAt ? String(item.endAt).slice(0, 16) : ''
 }
 
-function clearForm() {
+function clearForm({ preserveFeedback = false } = {}) {
   selectedId.value = ''
+  if (!preserveFeedback) {
+    feedback.value = ''
+  }
   loadForm(null)
+}
+
+function clearReorderFilter() {
+  reorderFilter.pageId = ''
+  reorderFilter.regionKey = ''
+  reorderPlacementIds.value = []
 }
 
 function selectPlacement(item) {
@@ -269,7 +312,7 @@ async function save() {
   }
 
   await refresh()
-  clearForm()
+  clearForm({ preserveFeedback: true })
 }
 
 async function runWorkflow(action) {
@@ -318,267 +361,275 @@ async function persistReorder() {
   await refresh()
 }
 
+async function goBack() {
+  await router.push({ name: 'contentManagement.overview' })
+}
+
+async function onHeaderAction(action) {
+  if (action?.key === 'refresh') {
+    await refresh()
+    return
+  }
+
+  if (action?.key === 'create') {
+    clearForm()
+  }
+}
+
 onMounted(refresh)
 </script>
 
 <template>
-  <PageWrapper class="page">
-    <div class="toolbar">
-      <h1>Placements</h1>
-      <div class="toolbar-actions">
-        <button class="btn btn-muted" type="button" @click="refresh">Refresh</button>
-        <button class="btn btn-muted" type="button" @click="clearForm">New</button>
-      </div>
-    </div>
-
-    <AppBentoGrid columns="2">
-      <section class="card">
-        <h2>{{ selectedId ? 'Edit Placement' : 'Create Placement' }}</h2>
-        <form class="form" @submit.prevent="save">
-          <label>
-            Page
-            <EntityRelationshipSelect v-model="form.pageId" :field="pageField" :model="form" />
-          </label>
-          <label>Region Key <input v-model="form.regionKey" type="text" required /></label>
-          <label>
-            Content Item
-            <EntityRelationshipSelect
-              v-model="form.contentItemId"
-              :field="contentItemField"
-              :model="form"
-            />
-          </label>
-          <label>
-            Content Version
-            <EntityRelationshipSelect
-              v-model="form.contentVersionId"
-              :field="contentVersionField"
-              :model="form"
-            />
-          </label>
-          <label
-            >Inline Block (JSON optional) <textarea v-model="form.inlineBlockJson" rows="5" />
-          </label>
-          <label>Order <input v-model.number="form.order" type="number" min="1" /></label>
-          <label><input v-model="form.isActive" type="checkbox" /> Active</label>
-          <label>Start At <input v-model="form.startAt" type="datetime-local" /></label>
-          <label>End At <input v-model="form.endAt" type="datetime-local" /></label>
-          <button class="btn btn-primary" type="submit" :disabled="loading">
-            {{ loading ? 'Saving...' : selectedId ? 'Update Placement' : 'Create Placement' }}
-          </button>
-          <p v-if="feedback" class="feedback">{{ feedback }}</p>
-          <p v-if="error" class="error">{{ error }}</p>
-        </form>
-      </section>
-
-      <section class="card">
-        <h2>Placements</h2>
-        <p v-if="loading">Loading placements...</p>
-        <p v-else-if="!placements.length">No placements found.</p>
-        <table v-else class="table">
-          <thead>
-            <tr>
-              <th>Placement ID</th>
-              <th>Page</th>
-              <th>Region</th>
-              <th>Order</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="item in placements"
-              :key="item.placementId"
-              :class="{ selected: item.placementId === selectedId }"
-              @click="selectPlacement(item)"
-            >
-              <td>{{ item.placementId }}</td>
-              <td>{{ getPageLabel(findPageId(item)) }}</td>
-              <td>{{ item.regionKey }}</td>
-              <td>{{ item.order }}</td>
-              <td>{{ item.publicationStatus || 'draft' }}</td>
-            </tr>
-          </tbody>
-        </table>
-        <TablePagination
-          v-if="placements.length"
-          :pagination="pagination"
-          :loading="loading"
-          @update:page="setPage"
-          @update:limit="setLimit"
-        />
-      </section>
-    </AppBentoGrid>
-
-    <section class="card">
-      <h2>Workflow Actions</h2>
-      <EntityWorkflowButtons
-        :disabled="!selected"
-        @submit="runWorkflow('submit')"
-        @approve="runWorkflow('approve')"
-        @reject="runWorkflow('reject')"
-        @publish="runWorkflow('publish')"
-        @unpublish="runWorkflow('unpublish')"
-        @archive="runWorkflow('archive')"
-        @restore="runWorkflow('restore')"
-        @restore-archived="runWorkflow('restoreArchived')"
-        @soft-delete="runWorkflow('softDelete')"
-        @delete="runWorkflow('delete')"
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Content Workspace"
+        title="Placements"
+        description="Map content into page regions, control timing, and keep placement order readable from one workspace."
+        :actions="headerActions"
+        :loading="loading"
+        @select="onHeaderAction"
+        @back="goBack"
       />
-    </section>
+    </template>
 
-    <section class="card">
-      <h2>Drag &amp; Drop Reorder</h2>
-      <div class="filters">
-        <label>
-          Page
-          <EntityRelationshipSelect
-            v-model="reorderFilter.pageId"
-            :field="pageField"
-            :model="reorderFilter"
-          />
-        </label>
-        <label
-          >Region Key <input v-model="reorderFilter.regionKey" type="text" placeholder="hero"
-        /></label>
-      </div>
-      <p class="hint">Filter by both page and region, drag rows to reorder, then click save.</p>
-      <ul class="reorder-list">
-        <li
-          v-for="(item, index) in reorderRows"
-          :key="item.placementId"
-          class="reorder-item"
-          draggable="true"
-          @dragstart="dragStart(index)"
-          @dragover="dragOver"
-          @drop="dropAt(index)"
+    <div class="workspace-shell">
+      <OverviewStatsGrid :stats="stats" />
+
+      <section class="workspace-grid">
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Placement editor"
+          :title="selectedId ? 'Update this placement' : 'Create a new placement'"
         >
-          <span>#{{ index + 1 }}</span>
-          <span>{{ item.placementId }}</span>
-          <span>{{ getPageLabel(findPageId(item)) }} / {{ item.regionKey }}</span>
-        </li>
-      </ul>
-      <button
-        class="btn btn-primary"
-        type="button"
-        :disabled="!reorderRows.length"
-        @click="persistReorder"
-      >
-        Save Reorder
-      </button>
-    </section>
+          <el-form label-position="top" class="workspace-form" @submit.prevent="save">
+            <AppFormRow :columns="2">
+              <el-form-item label="Page" class="form-item-flush">
+                <EntityRelationshipSelect v-model="form.pageId" :field="pageField" :model="form" />
+              </el-form-item>
+              <el-form-item label="Region Key" required class="form-item-flush">
+                <el-input v-model="form.regionKey" />
+              </el-form-item>
+              <el-form-item label="Content Item" class="form-item-flush">
+                <EntityRelationshipSelect
+                  v-model="form.contentItemId"
+                  :field="contentItemField"
+                  :model="form"
+                />
+              </el-form-item>
+              <el-form-item label="Content Version" class="form-item-flush">
+                <EntityRelationshipSelect
+                  v-model="form.contentVersionId"
+                  :field="contentVersionField"
+                  :model="form"
+                />
+              </el-form-item>
+            </AppFormRow>
+
+            <AppFormRow :columns="3">
+              <el-form-item label="Order" class="form-item-flush">
+                <el-input-number v-model="form.order" :min="1" />
+              </el-form-item>
+              <el-form-item label="Start At" class="form-item-flush">
+                <el-date-picker
+                  v-model="form.startAt"
+                  type="datetime"
+                  value-format="YYYY-MM-DDTHH:mm"
+                  placeholder="Select start date"
+                />
+              </el-form-item>
+              <el-form-item label="End At" class="form-item-flush">
+                <el-date-picker
+                  v-model="form.endAt"
+                  type="datetime"
+                  value-format="YYYY-MM-DDTHH:mm"
+                  placeholder="Select end date"
+                />
+              </el-form-item>
+            </AppFormRow>
+
+            <el-form-item label="Inline Block (JSON optional)" class="form-item-flush">
+              <el-input v-model="form.inlineBlockJson" type="textarea" :rows="5" />
+            </el-form-item>
+
+            <div class="workspace-toggle-row">
+              <el-checkbox v-model="form.isActive">Active</el-checkbox>
+            </div>
+
+            <div class="workspace-form__actions">
+              <el-button size="large" plain @click="clearForm">Clear</el-button>
+              <el-button size="large" type="primary" native-type="submit" :loading="loading">
+                {{ selectedId ? 'Save placement' : 'Create placement' }}
+              </el-button>
+            </div>
+
+            <el-alert
+              v-if="feedback"
+              type="success"
+              show-icon
+              :closable="false"
+              :title="feedback"
+            />
+            <el-alert v-if="error" type="error" show-icon :closable="false" :title="error" />
+          </el-form>
+        </WorkspacePanel>
+
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Placement library"
+          title="Browse active placement records"
+        >
+          <template #aside>
+            <StatusBadge v-if="selected" :value="resolveStatus(selected)" />
+          </template>
+          <div class="workspace-table workspace-table--scroll">
+            <el-table
+              :data="placements"
+              row-key="placementId"
+              stripe
+              highlight-current-row
+              :current-row-key="selectedId"
+              v-loading="loading"
+              @row-click="selectPlacement"
+            >
+              <el-table-column prop="placementId" label="Placement ID" min-width="190" />
+              <el-table-column label="Page" min-width="220">
+                <template #default="{ row }">
+                  {{ getPageLabel(findPageId(row)) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="regionKey" label="Region" min-width="140" />
+              <el-table-column prop="order" label="Order" min-width="100" />
+              <el-table-column label="Active" min-width="120">
+                <template #default="{ row }">
+                  <el-tag :type="row.isActive ? 'success' : 'info'" effect="plain">
+                    {{ row.isActive ? 'Active' : 'Inactive' }}
+                  </el-tag>
+                </template>
+              </el-table-column>
+              <el-table-column label="Workflow" min-width="140">
+                <template #default="{ row }">
+                  <StatusBadge :value="resolveStatus(row)" />
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+
+          <TablePagination
+            v-if="placements.length"
+            :pagination="pagination"
+            :loading="loading"
+            @update:page="setPage"
+            @update:limit="setLimit"
+          />
+        </WorkspacePanel>
+      </section>
+
+      <section class="workspace-grid workspace-grid--bottom">
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Selected placement"
+          :title="selected?.placementId || 'Choose a placement from the list'"
+        >
+          <template #aside>
+            <StatusBadge v-if="selected" :value="resolveStatus(selected)" />
+          </template>
+          <div v-if="selected" class="workspace-summary">
+            <div class="workspace-summary__row">
+              <span>Page</span>
+              <strong>{{ getPageLabel(findPageId(selected)) }}</strong>
+            </div>
+            <div class="workspace-summary__row">
+              <span>Region</span>
+              <strong>{{ selected.regionKey || '-' }}</strong>
+            </div>
+            <div class="workspace-summary__row">
+              <span>Content item</span>
+              <strong>{{ findContentItemId(selected) || 'Inline block only' }}</strong>
+            </div>
+            <div class="workspace-summary__row">
+              <span>Order</span>
+              <strong>{{ selected.order || 1 }}</strong>
+            </div>
+          </div>
+
+          <p v-else class="workspace-empty">
+            Select a placement to review where it appears, what it references, and how it is ordered.
+          </p>
+        </WorkspacePanel>
+
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Workflow"
+          title="Submit, approve, archive, or restore"
+        >
+          <EntityWorkflowButtons
+            :disabled="!selected"
+            @submit="runWorkflow('submit')"
+            @approve="runWorkflow('approve')"
+            @reject="runWorkflow('reject')"
+            @publish="runWorkflow('publish')"
+            @unpublish="runWorkflow('unpublish')"
+            @archive="runWorkflow('archive')"
+            @restore="runWorkflow('restore')"
+            @restore-archived="runWorkflow('restoreArchived')"
+            @soft-delete="runWorkflow('softDelete')"
+            @delete="runWorkflow('delete')"
+          />
+        </WorkspacePanel>
+      </section>
+
+      <WorkspacePanel eyebrow="Reorder workspace" title="Drag placement rows into the right sequence">
+        <el-form label-position="top" class="workspace-form">
+          <AppFormRow :columns="2">
+            <el-form-item label="Page" class="form-item-flush">
+              <EntityRelationshipSelect
+                v-model="reorderFilter.pageId"
+                :field="pageField"
+                :model="reorderFilter"
+              />
+            </el-form-item>
+            <el-form-item label="Region Key" class="form-item-flush">
+              <el-input v-model="reorderFilter.regionKey" placeholder="hero" />
+            </el-form-item>
+          </AppFormRow>
+        </el-form>
+
+        <p class="workspace-hint">
+          Filter by both page and region, then drag rows to reorder before saving.
+        </p>
+
+        <ul v-if="reorderRows.length" class="workspace-reorder-list">
+          <li
+            v-for="(item, index) in reorderRows"
+            :key="item.placementId"
+            class="workspace-reorder-item"
+            draggable="true"
+            @dragstart="dragStart(index)"
+            @dragover="dragOver"
+            @drop="dropAt(index)"
+          >
+            <span>#{{ index + 1 }}</span>
+            <span>{{ item.placementId }}</span>
+            <span>{{ getPageLabel(findPageId(item)) }} / {{ item.regionKey }}</span>
+          </li>
+        </ul>
+        <p v-else class="workspace-empty">
+          Select a page and region to load placements for manual ordering.
+        </p>
+
+        <div class="workspace-form__actions">
+          <el-button size="large" plain @click="clearReorderFilter">Clear selection</el-button>
+          <el-button
+            size="large"
+            type="primary"
+            :disabled="!reorderRows.length"
+            @click="persistReorder"
+          >
+            Save reorder
+          </el-button>
+        </div>
+      </WorkspacePanel>
+    </div>
   </PageWrapper>
 </template>
-
-<style scoped>
-.page {
-  display: grid;
-  gap: 1rem;
-  padding: 1rem;
-}
-
-.toolbar,
-.toolbar-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.card {
-  border: 1px solid var(--color-fcc-border);
-  border-radius: 0.5rem;
-  padding: 1rem;
-  background: var(--color-surface);
-}
-
-.form,
-.filters {
-  display: grid;
-  gap: 0.6rem;
-}
-
-label {
-  display: grid;
-  gap: 0.3rem;
-}
-
-input,
-textarea {
-  border: 1px solid var(--color-secondary-300);
-  border-radius: 0.375rem;
-  padding: 0.45rem 0.55rem;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.table th,
-.table td {
-  border: 1px solid var(--color-fcc-border);
-  padding: 0.45rem;
-  text-align: left;
-  font-size: 0.82rem;
-}
-
-.table tbody tr {
-  cursor: pointer;
-}
-
-.table tbody tr.selected {
-  background: var(--color-secondary-50);
-}
-
-.reorder-list {
-  list-style: none;
-  padding: 0;
-  margin: 0.7rem 0;
-  display: grid;
-  gap: 0.45rem;
-}
-
-.reorder-item {
-  border: 1px dashed var(--color-fcc-text-muted);
-  border-radius: 0.35rem;
-  background: var(--color-surface-muted);
-  padding: 0.45rem 0.6rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  cursor: move;
-  font-size: 0.85rem;
-}
-
-.btn {
-  border: 1px solid var(--color-secondary-300);
-  border-radius: 0.375rem;
-  padding: 0.45rem 0.7rem;
-  background: var(--color-surface);
-  cursor: pointer;
-}
-
-.btn-primary {
-  border-color: var(--color-primary-600);
-  background: var(--color-primary-600);
-  color: var(--color-surface);
-}
-
-.btn-muted {
-  background: var(--color-surface-muted);
-}
-
-.feedback {
-  color: var(--color-primary-600);
-}
-
-.hint {
-  color: var(--color-fcc-text-muted);
-  font-size: 0.86rem;
-}
-
-.error {
-  color: var(--color-danger);
-}
-</style>

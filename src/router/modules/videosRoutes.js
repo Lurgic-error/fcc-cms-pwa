@@ -39,7 +39,7 @@ export default [
         component: () => import('@/pages/videos/VideoCreatePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.CREATE]),
-          roles: [ROLES.EDITOR, ROLES.ADMIN],
+          roles: [ROLES.EDITOR, ROLES.PUBLISHER],
           type: 'create',
           breadcrumb: { label: 'Create', i18nKey: 'breadcrumbs.create' },
         },
@@ -50,7 +50,7 @@ export default [
         component: () => import('@/pages/videos/VideoReviewQueuePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.REVIEW]),
-          roles: [ROLES.REVIEWER, ROLES.ADMIN],
+          roles: [ROLES.REVIEWER, ROLES.PUBLISHER],
           type: 'review',
           breadcrumb: {
             label: 'Review Queue',
@@ -64,7 +64,7 @@ export default [
         component: () => import('@/pages/videos/VideoArchivePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.ARCHIVE]),
-          roles: [ROLES.ADMIN],
+          roles: [ROLES.PUBLISHER],
           type: 'archive',
           breadcrumb: {
             label: 'Archive',

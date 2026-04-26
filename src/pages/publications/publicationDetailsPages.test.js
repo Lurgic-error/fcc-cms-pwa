@@ -135,11 +135,12 @@ const globalStubs = {
     props: ['actions'],
     emits: ['select'],
     template:
-      '<button data-test="actions-trigger" @click="$emit(\'select\', actions[0])">Actions</button>',
+      '<div class="el-button el-button--default" data-test="actions-trigger" role="button" tabindex="0" @click="$emit(\'select\', actions[0])">Actions</div>',
   },
   ElButton: {
     emits: ['click'],
-    template: '<button @click="$emit(\'click\', $event)"><slot /></button>',
+    template:
+      '<div class="el-button el-button--default" role="button" tabindex="0" @click="$emit(\'click\', $event)"><slot /></div>',
   },
   ElAlert: {
     template: '<div><slot /></div>',

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
 import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import ResourceFormPage from '@/components/enterprise/ResourceFormPage.vue'
@@ -18,6 +19,7 @@ const categoriesStore = usePublicationCategoriesStore()
 const loading = ref(false)
 const error = ref('')
 const categories = ref([])
+const headerActions = Object.freeze([{ key: 'createCategory', label: 'Create Category First' }])
 
 const categorySummary = computed(() => buildCategorySummary(categories.value))
 const stats = computed(() => [
@@ -53,6 +55,11 @@ function goToCreateCategory() {
   })
 }
 
+function onHeaderAction(action) {
+  if (action?.key !== 'createCategory') return
+  goToCreateCategory()
+}
+
 onMounted(async () => {
   if (route.query?.categoryId && !route.query?.category) {
     await router.replace({
@@ -70,28 +77,17 @@ onMounted(async () => {
 <template>
   <PageWrapper>
     <template #header>
-      <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Create Publication
-          </p>
-          <h1 class="text-3xl font-semibold text-slate-950">Add a publication under a category</h1>
-          <p class="max-w-3xl text-sm text-slate-600">
-            Publications always belong to one category. If the right category is missing, create it
-            first and this form will reopen with the new category selected.
-          </p>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <el-button plain @click="goToCategories">Browse Categories</el-button>
-          <el-button type="primary" plain @click="goToCreateCategory"
-            >Create Category First</el-button
-          >
-        </div>
-      </div>
+      <EnterprisePageHeader
+        eyebrow="Create Publication"
+        title="Add a publication under a category"
+        description="Publications always belong to one category. If the right category is missing, create it first and this form will reopen with the new category selected."
+        :actions="headerActions"
+        @select="onHeaderAction"
+        @back="goToCategories"
+      />
     </template>
 
-    <div class="space-y-4">
+    <div class="enterprise-stack">
       <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" />
 
       <el-alert
@@ -102,7 +98,7 @@ onMounted(async () => {
         :closable="false"
       >
         <template #default>
-          <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="publication-create__empty-state">
             <span>
               Create the parent category first, then continue here to create the publication under
               it.

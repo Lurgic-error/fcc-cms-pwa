@@ -1,5 +1,6 @@
 export function extractErrorMessage(error, fallback = 'An unexpected error occurred.') {
   const source = error?.error || error
+  if (typeof source === 'string') return source
 
   return (
     source?.response?.data?.error ||

@@ -2,11 +2,17 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
 import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
 import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 
 const router = useRouter()
+const headerActions = Object.freeze([
+  { key: 'openPages', label: 'Open Pages' },
+  { key: 'openContentItems', label: 'Open Content Items' },
+])
 
 const stats = computed(() => [
   {
@@ -67,88 +73,89 @@ const workspaceGroups = Object.freeze([
 function openWorkspace(routeName) {
   router.push({ name: routeName })
 }
+
+function goBack() {
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+
+  router.push({ name: 'dashboard.overview' })
+}
+
+function onHeaderAction(action) {
+  switch (action?.key) {
+    case 'openPages':
+      openWorkspace('contentManagement.pages')
+      return
+    case 'openContentItems':
+      openWorkspace('contentManagement.contentItems')
+      return
+    default:
+  }
+}
 </script>
 
 <template>
   <PageWrapper>
     <template #header>
-      <div class="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Content Management
-          </p>
-          <h1 class="text-3xl font-semibold text-slate-950">
-            Operate the managed content system with less guesswork
-          </h1>
-          <p class="max-w-4xl text-sm text-slate-600">
-            This workspace is the control layer for localized page building. Start with the system
-            foundations, move into pages and content items, then verify versions and placements
-            before publishing changes.
-          </p>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <el-button plain @click="openWorkspace('contentManagement.pages')">Open Pages</el-button>
-          <el-button type="primary" @click="openWorkspace('contentManagement.contentItems')">
-            Open Content Items
-          </el-button>
-        </div>
-      </div>
+      <EnterprisePageHeader
+        eyebrow="Content Management"
+        eyebrow-class="workspace-eyebrow"
+        title="Operate the managed content system with less guesswork"
+        description="This workspace is the control layer for localized page building. Start with the system foundations, move into pages and content items, then verify versions and placements before publishing changes."
+        :actions="headerActions"
+        @select="onHeaderAction"
+        @back="goBack"
+      />
     </template>
 
-    <div class="space-y-4">
+    <div class="enterprise-stack enterprise-stack--spacious">
       <OverviewStatsGrid :stats="stats" />
 
       <AppBentoGrid columns="3">
-        <el-card
+        <WorkspacePanel
           v-for="group in workspaceGroups"
           :key="group.key"
-          shadow="never"
-          class="border border-slate-200"
+          tag="section"
+          :eyebrow="group.eyebrow"
+          :title="group.title"
+          :description="group.description"
         >
-          <div class="space-y-4">
-            <div class="space-y-2">
-              <p class="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                {{ group.eyebrow }}
-              </p>
-              <h2 class="text-xl font-semibold text-slate-900">{{ group.title }}</h2>
-              <p class="text-sm leading-6 text-slate-600">{{ group.description }}</p>
-            </div>
-
-            <div class="flex flex-wrap gap-2">
-              <el-button
-                v-for="action in group.actions"
-                :key="action.route"
-                plain
-                @click="openWorkspace(action.route)"
-              >
-                {{ action.label }}
-              </el-button>
-            </div>
+          <div class="workspace-inline-actions">
+            <el-button
+              v-for="action in group.actions"
+              :key="action.route"
+              size="large"
+              plain
+              @click="openWorkspace(action.route)"
+            >
+              {{ action.label }}
+            </el-button>
           </div>
-        </el-card>
+        </WorkspacePanel>
       </AppBentoGrid>
 
-      <el-card shadow="never" class="border border-slate-200">
-        <div class="grid gap-4 lg:grid-cols-2">
-          <div class="space-y-2">
-            <p class="text-sm font-semibold text-slate-900">Recommended editor flow</p>
-            <p class="text-sm text-slate-600">
+      <WorkspacePanel>
+        <div class="content-admin-note-grid">
+          <article class="content-admin-note">
+            <h3>Recommended editor flow</h3>
+            <p>
               1. Confirm locale and layout foundations. 2. Create or update the page shell. 3. Edit
               content items. 4. Place blocks on the page. 5. Review versions before publishing.
             </p>
-          </div>
+          </article>
 
-          <div class="space-y-2">
-            <p class="text-sm font-semibold text-slate-900">Why this overview exists</p>
-            <p class="text-sm text-slate-600">
+          <article class="content-admin-note">
+            <h3>Why this overview exists</h3>
+            <p>
               The previous landing flow dropped users directly into one submodule. This overview
               makes the relationship between the content-management areas explicit so the editorial
               system is easier to learn and test.
             </p>
-          </div>
+          </article>
         </div>
-      </el-card>
+      </WorkspacePanel>
     </div>
   </PageWrapper>
 </template>

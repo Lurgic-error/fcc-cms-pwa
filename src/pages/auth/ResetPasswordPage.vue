@@ -1,6 +1,4 @@
 <script setup>
-import BaseButton from '@/components/common/BaseButton.vue'
-import BaseInput from '@/components/common/BaseInput.vue'
 import { useAuthStore } from '@/stores/useAuthStore'
 import logo from '@/assets/imgs/logo-2-removebg-preview.png'
 import { computed, reactive, ref } from 'vue'
@@ -52,108 +50,98 @@ async function submit() {
 
 <template>
   <section class="auth-form-card auth-form-card--compact">
-    <div class="text-center">
-      <div
-        class="auth-form-logo-shell mx-auto mb-4 flex h-20 w-20 items-center justify-center"
-        style="border-radius: var(--fcc-radius-lg)"
-      >
-        <img :src="logo" alt="Fair Competition Commission Logo" class="h-14 w-14 object-contain" />
+    <div class="auth-form-header">
+      <div class="auth-form-logo-shell">
+        <img :src="logo" alt="Fair Competition Commission Logo" class="auth-form-logo" />
       </div>
-      <p class="auth-form-eyebrow text-xs font-semibold uppercase tracking-[0.2em]">
-        Fair Competition Commission
-      </p>
-      <h2 class="auth-form-title mt-2 text-2xl font-bold">{{ t('auth.resetPassword') }}</h2>
-      <p class="auth-form-subtitle mt-2">{{ t('auth.resetPasswordSubtitle') }}</p>
+      <h2 class="auth-form-title">{{ t('auth.resetPassword') }}</h2>
+      <p class="auth-form-subtitle">{{ t('auth.resetPasswordSubtitle') }}</p>
     </div>
 
     <form class="auth-form" @submit.prevent="submit">
-      <BaseInput
-        v-model="form.email"
-        name="email"
-        type="email"
-        autocomplete="email"
-        :label="t('auth.email')"
-        :required="true"
-      />
+      <label class="base-input">
+        <span class="label form-label">
+          {{ t('auth.email') }}
+          <span class="required">*</span>
+        </span>
+        <el-input
+          v-model="form.email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          size="large"
+          class="base-input__control"
+        />
+      </label>
 
-      <BaseInput
-        v-model="form.token"
-        name="token"
-        type="text"
-        autocomplete="one-time-code"
-        :label="t('auth.recoveryToken')"
-        :placeholder="t('auth.recoveryTokenPlaceholder')"
-        :required="true"
-      />
+      <label class="base-input">
+        <span class="label form-label">
+          {{ t('auth.recoveryToken') }}
+          <span class="required">*</span>
+        </span>
+        <el-input
+          v-model="form.token"
+          name="token"
+          type="text"
+          autocomplete="one-time-code"
+          :placeholder="t('auth.recoveryTokenPlaceholder')"
+          size="large"
+          class="base-input__control"
+        />
+      </label>
 
-      <BaseInput
-        v-model="form.password"
-        name="password"
-        type="password"
-        autocomplete="new-password"
-        :label="t('auth.newPassword')"
-        :hint="passwordHint"
-        :required="true"
-      />
+      <label class="base-input">
+        <span class="label form-label">
+          {{ t('auth.newPassword') }}
+          <span class="required">*</span>
+        </span>
+        <el-input
+          v-model="form.password"
+          name="password"
+          type="password"
+          autocomplete="new-password"
+          size="large"
+          show-password
+          class="base-input__control"
+        />
+        <span class="hint">{{ passwordHint }}</span>
+      </label>
 
-      <BaseInput
-        v-model="form.confirmedPassword"
-        name="confirmedPassword"
-        type="password"
-        autocomplete="new-password"
-        :label="t('auth.confirmPassword')"
-        :required="true"
-      />
+      <label class="base-input">
+        <span class="label form-label">
+          {{ t('auth.confirmPassword') }}
+          <span class="required">*</span>
+        </span>
+        <el-input
+          v-model="form.confirmedPassword"
+          name="confirmedPassword"
+          type="password"
+          autocomplete="new-password"
+          size="large"
+          show-password
+          class="base-input__control"
+        />
+      </label>
 
-      <p v-if="authStore.error" class="error">{{ authStore.error }}</p>
-      <p v-if="statusMessage" class="success">{{ statusMessage }}</p>
+      <p v-if="authStore.error" class="auth-status auth-status--error">{{ authStore.error }}</p>
+      <p v-if="statusMessage" class="auth-status auth-status--success">{{ statusMessage }}</p>
 
-      <BaseButton
-        type="submit"
-        variant="primary"
-        class="auth-primary-button"
+      <el-button
+        native-type="submit"
+        type="primary"
+        size="large"
+        class="base-button block auth-primary-button"
         :loading="authStore.loading"
         :disabled="!canSubmit"
-        :block="true"
       >
         {{ t('auth.resetPasswordAction') }}
-      </BaseButton>
+      </el-button>
     </form>
 
-    <router-link class="auth-form-link auth-link" :to="{ name: 'login' }">
-      {{ t('auth.backToLogin') }}
-    </router-link>
+    <div class="auth-form-footer">
+      <router-link class="auth-link" :to="{ name: 'login' }">
+        {{ t('auth.backToLogin') }}
+      </router-link>
+    </div>
   </section>
 </template>
-
-<style scoped>
-.auth-form-title {
-  font-size: 1.1rem;
-}
-
-.auth-form {
-  display: grid;
-  gap: 0.75rem;
-  margin-top: 1.2rem;
-}
-
-.error {
-  color: var(--color-danger);
-  font-size: 0.82rem;
-}
-
-.success {
-  color: var(--color-primary-600);
-  font-size: 0.82rem;
-}
-
-.auth-link {
-  margin-top: 0.2rem;
-  font-size: 0.84rem;
-  text-decoration: none;
-}
-
-.auth-link:hover {
-  text-decoration: underline;
-}
-</style>

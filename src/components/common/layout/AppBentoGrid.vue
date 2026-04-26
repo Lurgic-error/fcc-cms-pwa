@@ -22,23 +22,23 @@ onUpdated(updateCount)
 const gridClass = computed(() => {
   const count = visibleCount.value
 
-  if (props.columns === 1 || count <= 1) return 'grid-cols-1'
-  if (props.columns === 2 || count === 2) return 'grid-cols-1 lg:grid-cols-2'
-  if (props.columns === 3 || count === 3) return 'grid-cols-1 lg:grid-cols-3'
-  if (props.columns === 4 || count === 4) return 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-4'
-  if (count === 5) return 'grid-cols-1 md:grid-cols-2 xl:grid-cols-5' // or something similar
+  if (props.columns === 1 || count <= 1) return 'app-bento-grid--1'
+  if (props.columns === 2 || count === 2) return 'app-bento-grid--2'
+  if (props.columns === 3 || count === 3) return 'app-bento-grid--3'
+  if (props.columns === 4 || count === 4) return 'app-bento-grid--4'
+  if (count === 5) return 'app-bento-grid--5'
 
   // Auto mode logic for bento grids
-  if (count === 2) return 'grid-cols-1 lg:grid-cols-[1.4fr_1fr]'
+  if (count === 2) return 'app-bento-grid--feature-split'
 
-  return 'grid-cols-1 md:grid-cols-2 xl:grid-cols-3'
+  return 'app-bento-grid--auto'
 })
 </script>
 
 <template>
   <div
     ref="containerRef"
-    class="grid gap-4 md:gap-5 transition-all duration-300 items-stretch"
+    class="app-bento-grid"
     :class="gridClass"
   >
     <slot />

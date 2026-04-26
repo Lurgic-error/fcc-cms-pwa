@@ -39,7 +39,14 @@ function readValue(field, record = {}) {
       <slot name="header-actions" />
     </template>
 
-    <el-alert v-if="error" :title="error" type="error" show-icon :closable="false" class="mb-4" />
+    <el-alert
+      v-if="error"
+      :title="error"
+      type="error"
+      show-icon
+      :closable="false"
+      class="app-inline-alert"
+    />
 
     <div v-loading="loading">
       <AppDetailGrid :columns="2">
@@ -69,8 +76,7 @@ function readValue(field, record = {}) {
               "
               :src="readValue(field, record || {}).formattedValue"
               :alt="field.label"
-              class="h-32 w-full max-w-xs border object-cover"
-              style="border-radius: var(--fcc-radius-lg); border-color: var(--fcc-border)"
+              class="enterprise-detail-image"
             />
             <template v-else>
               {{ readValue(field, record || {}).formattedValue }}

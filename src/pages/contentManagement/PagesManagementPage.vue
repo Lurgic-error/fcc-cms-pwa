@@ -1,17 +1,23 @@
 <script setup>
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
 import AppSearchField from '@/components/common/AppSearchField.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
 import EntityRelationshipSelect from '@/components/forms/EntityRelationshipSelect.vue'
+import SmartFormGrid from '@/components/forms/SmartFormGrid.vue'
 import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import EntityWorkflowButtons from '@/components/workflow/EntityWorkflowButtons.vue'
 import { useCmsPagesStore } from '@/stores/useCmsPagesStore'
 import { useLayoutsStore } from '@/stores/useLayoutsStore'
 import { formatDisplayDate } from '@/utils/adminPresentation'
+import { replaceValidationState, validateRequiredFields } from '@/utils/formValidation'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const pagesStore = useCmsPagesStore()
 const layoutsStore = useLayoutsStore()
 const { entities: pages, loading, error, pagination } = storeToRefs(pagesStore)
@@ -22,6 +28,7 @@ const searchQuery = ref('')
 const feedback = ref('')
 const pager = reactive({ page: 1, limit: 20 })
 const metaSnapshot = ref({})
+const validationErrors = reactive({})
 
 const form = reactive({
   name: '',
@@ -60,6 +67,12 @@ const filteredPages = computed(() => {
   )
 })
 
+const visibilityOptions = Object.freeze([
+  { label: 'Public', value: 'public' },
+  { label: 'Private', value: 'private' },
+  { label: 'Authenticated only', value: 'auth-only' },
+])
+
 const stats = computed(() => [
   { key: 'total', label: 'Pages', value: pages.value.length },
   {
@@ -77,6 +90,11 @@ const stats = computed(() => [
     label: 'Private Pages',
     value: pages.value.filter((item) => item?.visibility === 'private').length,
   },
+])
+
+const headerActions = Object.freeze([
+  { key: 'refresh', label: 'Refresh workspace' },
+  { key: 'create', label: 'New page' },
 ])
 
 function resolveLayoutLabel(item = {}) {
@@ -108,7 +126,77 @@ const layoutField = {
   loadOptions: loadLayoutOptions,
 }
 
+const identityFields = computed(() => [
+  {
+    key: 'name',
+    label: 'Page Name',
+    placeholder: 'About FCC',
+    required: true,
+  },
+  {
+    key: 'slug',
+    label: 'Page URL',
+    placeholder: '/about',
+    required: true,
+  },
+  {
+    key: 'layoutId',
+    label: 'Layout',
+    component: 'entity-select',
+    ...layoutField,
+  },
+  {
+    key: 'visibility',
+    label: 'Visibility',
+    component: 'select',
+    options: visibilityOptions,
+  },
+])
+
+const seoFields = Object.freeze([
+  {
+    key: 'metaTitleEn',
+    label: 'SEO Title (English)',
+    placeholder: 'Page title shown to search engines',
+  },
+  {
+    key: 'metaTitleSw',
+    label: 'SEO Title (Swahili)',
+    placeholder: 'Kichwa cha ukurasa kwa injini za utafutaji',
+  },
+  {
+    key: 'metaDescriptionEn',
+    label: 'SEO Description (English)',
+    component: 'textarea',
+    rows: 4,
+    placeholder: 'Short description for sharing and search results',
+  },
+  {
+    key: 'metaDescriptionSw',
+    label: 'SEO Description (Swahili)',
+    component: 'textarea',
+    rows: 4,
+    placeholder: 'Maelezo mafupi kwa mitandao na utafutaji',
+  },
+])
+
+const heroFields = Object.freeze([
+  {
+    key: 'heroEyebrow',
+    label: 'Hero Eyebrow',
+    placeholder: 'For example: Our mandate',
+  },
+  {
+    key: 'heroSummary',
+    label: 'Hero Summary',
+    component: 'textarea',
+    rows: 4,
+    placeholder: 'Short introductory message for this page',
+  },
+])
+
 function loadForm(item = null) {
+  replaceValidationState(validationErrors)
   metaSnapshot.value = item?.meta || {}
   form.name = item?.name || ''
   form.slug = item?.slug || '/'
@@ -152,8 +240,27 @@ async function setLimit(limit) {
   await refresh()
 }
 
+function validateForm() {
+  const { errors, isValid } = validateRequiredFields([
+    {
+      key: 'name',
+      label: 'Page Name',
+      value: () => form.name.trim(),
+    },
+    {
+      key: 'slug',
+      label: 'Page URL',
+      value: () => form.slug.trim(),
+    },
+  ])
+
+  replaceValidationState(validationErrors, errors)
+  return isValid
+}
+
 async function save() {
   feedback.value = ''
+  if (!validateForm()) return
 
   const payload = {
     name: form.name.trim(),
@@ -208,111 +315,114 @@ async function runWorkflow(action) {
   await refresh()
 }
 
+async function goBack() {
+  await router.push({ name: 'contentManagement.overview' })
+}
+
+async function onHeaderAction(action) {
+  if (action?.key === 'refresh') {
+    await refresh()
+    return
+  }
+
+  if (action?.key === 'create') {
+    clearForm()
+  }
+}
+
 onMounted(refresh)
 </script>
 
 <template>
-  <PageWrapper
-    title="Website Pages"
-    description="Shape page identity, layout, and public-facing copy in a language PR officers can understand."
-  >
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        eyebrow="Content Workspace"
+        title="Website Pages"
+        description="Shape page identity, layout, and public-facing copy in a language PR officers can understand."
+        :actions="headerActions"
+        :loading="loading"
+        @select="onHeaderAction"
+        @back="goBack"
+      />
+    </template>
+
     <div class="workspace-shell">
       <OverviewStatsGrid :stats="stats" />
 
       <section class="workspace-grid">
-        <article class="workspace-panel surface-card">
-          <header class="workspace-panel__header">
-            <div>
-              <p class="workspace-eyebrow">Page editor</p>
-              <h2>{{ selectedId ? 'Update this page' : 'Create a new page' }}</h2>
-            </div>
-            <div class="flex flex-wrap gap-2">
-              <el-button plain @click="refresh">Refresh</el-button>
-              <el-button type="primary" plain @click="clearForm">New page</el-button>
-            </div>
-          </header>
-
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Page editor"
+          :title="selectedId ? 'Update this page' : 'Create a new page'"
+        >
           <el-form label-position="top" class="workspace-form" @submit.prevent="save">
-            <div class="workspace-form__grid">
-              <el-form-item label="Page Name" required>
-                <el-input v-model="form.name" placeholder="About FCC" />
-              </el-form-item>
+            <SmartFormGrid :fields="identityFields" :columns="2">
+              <template #default="{ field }">
+                <el-form-item
+                  :label="field.label"
+                  :required="field.required"
+                  :error="validationErrors[field.key]"
+                  class="form-item-flush"
+                >
+                  <EntityRelationshipSelect
+                    v-if="field.component === 'entity-select'"
+                    v-model="form[field.key]"
+                    :field="field"
+                    :model="form"
+                  />
 
-              <el-form-item label="Page URL" required>
-                <el-input v-model="form.slug" placeholder="/about" />
-              </el-form-item>
+                  <el-select v-else-if="field.component === 'select'" v-model="form[field.key]">
+                    <el-option
+                      v-for="option in field.options || []"
+                      :key="option.value"
+                      :label="option.label"
+                      :value="option.value"
+                    />
+                  </el-select>
 
-              <el-form-item label="Layout">
-                <EntityRelationshipSelect
-                  v-model="form.layoutId"
-                  :field="layoutField"
-                  :model="form"
-                />
-              </el-form-item>
+                  <el-input v-else v-model="form[field.key]" :placeholder="field.placeholder" />
+                </el-form-item>
+              </template>
+            </SmartFormGrid>
 
-              <el-form-item label="Visibility">
-                <el-select v-model="form.visibility">
-                  <el-option label="Public" value="public" />
-                  <el-option label="Private" value="private" />
-                  <el-option label="Authenticated only" value="auth-only" />
-                </el-select>
-              </el-form-item>
-            </div>
-
-            <el-form-item>
+            <el-form-item class="workspace-form__checkbox">
               <el-checkbox v-model="form.isHomePage"
                 >Use this as a homepage entry point</el-checkbox
               >
             </el-form-item>
 
-            <div class="workspace-form__grid">
-              <el-form-item label="SEO Title (English)">
-                <el-input
-                  v-model="form.metaTitleEn"
-                  placeholder="Page title shown to search engines"
-                />
-              </el-form-item>
+            <SmartFormGrid :fields="seoFields" :columns="2">
+              <template #default="{ field }">
+                <el-form-item :label="field.label" class="form-item-flush">
+                  <el-input
+                    v-if="field.component === 'textarea'"
+                    v-model="form[field.key]"
+                    type="textarea"
+                    :rows="field.rows || 4"
+                    :placeholder="field.placeholder"
+                  />
 
-              <el-form-item label="SEO Title (Swahili)">
-                <el-input
-                  v-model="form.metaTitleSw"
-                  placeholder="Kichwa cha ukurasa kwa injini za utafutaji"
-                />
-              </el-form-item>
+                  <el-input v-else v-model="form[field.key]" :placeholder="field.placeholder" />
+                </el-form-item>
+              </template>
+            </SmartFormGrid>
 
-              <el-form-item label="SEO Description (English)">
-                <el-input
-                  v-model="form.metaDescriptionEn"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="Short description for sharing and search results"
-                />
-              </el-form-item>
+            <SmartFormGrid :fields="heroFields" :columns="2">
+              <template #default="{ field }">
+                <el-form-item :label="field.label" class="form-item-flush">
+                  <el-input
+                    v-if="field.component === 'textarea'"
+                    v-model="form[field.key]"
+                    type="textarea"
+                    :rows="field.rows || 4"
+                    :placeholder="field.placeholder"
+                  />
 
-              <el-form-item label="SEO Description (Swahili)">
-                <el-input
-                  v-model="form.metaDescriptionSw"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="Maelezo mafupi kwa mitandao na utafutaji"
-                />
-              </el-form-item>
-            </div>
-
-            <div class="workspace-form__grid">
-              <el-form-item label="Hero Eyebrow">
-                <el-input v-model="form.heroEyebrow" placeholder="For example: Our mandate" />
-              </el-form-item>
-
-              <el-form-item label="Hero Summary">
-                <el-input
-                  v-model="form.heroSummary"
-                  type="textarea"
-                  :rows="4"
-                  placeholder="Short introductory message for this page"
-                />
-              </el-form-item>
-            </div>
+                  <el-input v-else v-model="form[field.key]" :placeholder="field.placeholder" />
+                </el-form-item>
+              </template>
+            </SmartFormGrid>
 
             <div class="workspace-form__actions">
               <el-button @click="clearForm">Clear</el-button>
@@ -330,29 +440,25 @@ onMounted(refresh)
             />
             <el-alert v-if="error" type="error" show-icon :closable="false" :title="error" />
           </el-form>
-        </article>
+        </WorkspacePanel>
 
-        <article class="workspace-panel surface-card">
-          <header class="workspace-panel__header">
-            <div>
-              <p class="workspace-eyebrow">Page library</p>
-              <h2>Find and select pages</h2>
-            </div>
+        <WorkspacePanel tag="article" eyebrow="Page library" title="Find and select pages">
+          <template #aside>
             <AppSearchField
               v-model="searchQuery"
               label="Search pages"
               placeholder="Search by page name, URL, SEO text, or visibility"
               class="workspace-search"
             />
-          </header>
+          </template>
 
           <div class="workspace-table">
             <el-table :data="filteredPages" v-loading="loading" stripe>
               <el-table-column label="Page" min-width="220">
                 <template #default="{ row }">
-                  <button type="button" class="workspace-link" @click="selectPage(row)">
+                  <el-button link class="workspace-link" @click="selectPage(row)">
                     {{ row.name }}
-                  </button>
+                  </el-button>
                 </template>
               </el-table-column>
               <el-table-column label="URL" min-width="180" prop="slug" />
@@ -382,21 +488,21 @@ onMounted(refresh)
             @update:page="setPage"
             @update:limit="setLimit"
           />
-        </article>
+        </WorkspacePanel>
       </section>
 
       <section class="workspace-grid workspace-grid--bottom">
-        <article class="workspace-panel surface-card">
-          <header class="workspace-panel__header">
-            <div>
-              <p class="workspace-eyebrow">Selected page</p>
-              <h2>{{ selected?.name || 'Choose a page from the library' }}</h2>
-            </div>
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Selected page"
+          :title="selected?.name || 'Choose a page from the library'"
+        >
+          <template #aside>
             <StatusBadge
               v-if="selected"
               :value="selected.effectiveStatus || selected.publicationStatus"
             />
-          </header>
+          </template>
 
           <div v-if="selected" class="workspace-summary">
             <div class="workspace-summary__row">
@@ -420,16 +526,13 @@ onMounted(refresh)
           <p v-else class="workspace-empty">
             Select a page to review its current status and workflow options.
           </p>
-        </article>
+        </WorkspacePanel>
 
-        <article class="workspace-panel surface-card">
-          <header class="workspace-panel__header">
-            <div>
-              <p class="workspace-eyebrow">Workflow</p>
-              <h2>Submit, publish, archive, or restore</h2>
-            </div>
-          </header>
-
+        <WorkspacePanel
+          tag="article"
+          eyebrow="Workflow"
+          title="Submit, publish, archive, or restore"
+        >
           <EntityWorkflowButtons
             :disabled="!selected"
             @submit="runWorkflow('submit')"
@@ -443,107 +546,8 @@ onMounted(refresh)
             @soft-delete="runWorkflow('softDelete')"
             @delete="runWorkflow('delete')"
           />
-        </article>
+        </WorkspacePanel>
       </section>
     </div>
   </PageWrapper>
 </template>
-
-<style scoped>
-.workspace-shell,
-.workspace-form,
-.workspace-summary {
-  display: grid;
-  gap: 1rem;
-}
-
-.workspace-grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.workspace-panel {
-  padding: 1.2rem;
-}
-
-.workspace-panel__header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 0.9rem;
-  margin-bottom: 1rem;
-}
-
-.workspace-eyebrow {
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--fcc-secondary-700);
-}
-
-.workspace-form__grid {
-  display: grid;
-  gap: 1rem;
-}
-
-.workspace-form__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
-
-.workspace-search {
-  width: min(100%, 24rem);
-}
-
-.workspace-table {
-  min-height: 24rem;
-}
-
-.workspace-link {
-  border: 0;
-  background: transparent;
-  padding: 0;
-  font: inherit;
-  color: var(--fcc-primary-800);
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.workspace-summary__row {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-bottom: 0.85rem;
-  border-bottom: 1px solid var(--fcc-border);
-}
-
-.workspace-summary__row span {
-  color: var(--fcc-text-muted);
-}
-
-.workspace-summary__row strong {
-  text-align: right;
-  color: var(--fcc-text);
-}
-
-.workspace-empty {
-  color: var(--fcc-text-muted);
-}
-
-@media (min-width: 1024px) {
-  .workspace-grid {
-    grid-template-columns: minmax(0, 1.02fr) minmax(0, 1fr);
-  }
-
-  .workspace-grid--bottom {
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  }
-
-  .workspace-form__grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-</style>

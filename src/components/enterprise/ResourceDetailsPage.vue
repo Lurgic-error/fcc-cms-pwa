@@ -2,10 +2,10 @@
 import { computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
 import EntityDetailsPanel from '@/components/enterprise/EntityDetailsPanel.vue'
 import ContentWorkflowStatusPanel from '@/components/workflow/ContentWorkflowStatusPanel.vue'
-import EntityActionsDropdown from '@/components/workflow/EntityActionsDropdown.vue'
 import { useEditorialActions } from '@/composables/useEditorialActions'
 import { useEntityCrud } from '@/composables/useEntityCrud'
 import { useRouteAccess } from '@/composables/useRouteAccess'
@@ -86,29 +86,18 @@ watch(recordId, (nextId, previousId) => {
 <template>
   <PageWrapper>
     <template #header>
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Detail View
-          </p>
-          <h1 class="text-2xl font-semibold text-slate-950">{{ pageTitle }}</h1>
-          <p class="max-w-3xl text-sm text-slate-600">{{ pageDescription }}</p>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <el-button plain @click="goBack">Back</el-button>
-          <EntityActionsDropdown
-            :actions="detailActions"
-            label="Actions"
-            type="primary"
-            :loading="loading"
-            @select="onAction"
-          />
-        </div>
-      </div>
+      <EnterprisePageHeader
+        eyebrow="Detail View"
+        :title="pageTitle"
+        :description="pageDescription"
+        :actions="detailActions"
+        :loading="loading"
+        @select="onAction"
+        @back="goBack"
+      />
     </template>
 
-    <div class="space-y-4">
+    <div class="enterprise-stack">
       <ContentWorkflowStatusPanel :record="entity" />
 
       <EntityDetailsPanel

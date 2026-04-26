@@ -1,5 +1,9 @@
 <script setup>
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
+import WorkspacePanel from '@/components/common/WorkspacePanel.vue'
+import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
+import AppFormRow from '@/components/forms/AppFormRow.vue'
 import EntityDetailsPanel from '@/components/enterprise/EntityDetailsPanel.vue'
 import OverviewChartCard from '@/components/enterprise/OverviewChartCard.vue'
 import OverviewFilterBar from '@/components/enterprise/OverviewFilterBar.vue'
@@ -10,12 +14,30 @@ import { formatDisplayDate } from '@/utils/adminPresentation'
 import { useVisitorsStore } from '@/stores/useVisitorsStore'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
+const router = useRouter()
 const visitorsStore = useVisitorsStore()
 const { visitors, visitor, summary, hotspots, pagination, loading, error } =
   storeToRefs(visitorsStore)
 
 const pageLoading = ref(false)
+const headerActions = Object.freeze([
+  { key: 'refreshOverview', label: 'Refresh Overview' },
+  { key: 'openAnalytics', label: 'Open Analytics' },
+  { key: 'openHeatmap', label: 'Open Heatmap' },
+])
+const analyticsWindowOptions = Object.freeze([
+  { value: 7, label: '7 days' },
+  { value: 14, label: '14 days' },
+  { value: 30, label: '30 days' },
+  { value: 90, label: '90 days' },
+])
+const analyticsLimitOptions = Object.freeze([
+  { value: 5, label: 'Top 5' },
+  { value: 8, label: 'Top 8' },
+  { value: 10, label: 'Top 10' },
+])
 const analytics = reactive({
   days: 30,
   limit: 8,
@@ -247,6 +269,30 @@ async function resetFilters() {
   await refreshList()
 }
 
+function goBack() {
+  if (window.history.length > 1) {
+    router.back()
+    return
+  }
+
+  router.push({ name: 'dashboard.overview' })
+}
+
+async function onHeaderAction(action) {
+  switch (action?.key) {
+    case 'refreshOverview':
+      await refreshAll()
+      return
+    case 'openAnalytics':
+      await router.push({ name: 'visitors.analytics' })
+      return
+    case 'openHeatmap':
+      await router.push({ name: 'visitors.heatmap' })
+      return
+    default:
+  }
+}
+
 function updateFilterValues(values = {}) {
   filters.isActive = values.isActive || ''
 }
@@ -269,36 +315,65 @@ onMounted(refreshAll)
 <template>
   <PageWrapper>
     <template #header>
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Admin Overview
-          </p>
-          <h1 class="text-2xl font-semibold text-slate-950">Visitors</h1>
-          <p class="max-w-3xl text-sm text-slate-600">
-            Monitor visitor volume, recent traffic patterns, hotspot behavior, and individual
-            visitor records from one management page.
-          </p>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <el-select v-model="analytics.days" class="w-36">
-            <el-option :value="7" label="7 days" />
-            <el-option :value="14" label="14 days" />
-            <el-option :value="30" label="30 days" />
-            <el-option :value="90" label="90 days" />
-          </el-select>
-          <el-select v-model="analytics.limit" class="w-36">
-            <el-option :value="5" label="Top 5" />
-            <el-option :value="8" label="Top 8" />
-            <el-option :value="10" label="Top 10" />
-          </el-select>
-          <el-button plain :loading="pageLoading || loading" @click="refreshAll">Refresh</el-button>
-        </div>
-      </div>
+      <EnterprisePageHeader
+        eyebrow="Admin Overview"
+        title="Visitors"
+        description="Monitor visitor volume, recent traffic patterns, hotspot behavior, and individual visitor records from one management page."
+        :actions="headerActions"
+        :loading="pageLoading || loading"
+        @select="onHeaderAction"
+        @back="goBack"
+      />
     </template>
 
-    <div class="space-y-4">
+    <div class="enterprise-stack">
+      <WorkspacePanel
+        class="enterprise-filter-surface"
+        eyebrow="Analytics controls"
+        title="Adjust the reporting window and leaderboard scope"
+      >
+        <el-form label-position="top" class="workspace-form" @submit.prevent="refreshAll">
+          <AppFormRow :columns="3">
+            <el-form-item label="Analytics Window" class="form-item-flush">
+              <el-select v-model="analytics.days" size="large" @change="refreshAll">
+                <el-option
+                  v-for="option in analyticsWindowOptions"
+                  :key="option.value"
+                  :value="option.value"
+                  :label="option.label"
+                />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="Leaderboard Size" class="form-item-flush">
+              <el-select
+                v-model="analytics.limit"
+                size="large"
+                @change="refreshAll"
+              >
+                <el-option
+                  v-for="option in analyticsLimitOptions"
+                  :key="option.value"
+                  :value="option.value"
+                  :label="option.label"
+                />
+              </el-select>
+            </el-form-item>
+
+            <div class="app-form-row__action">
+              <el-button
+                size="large"
+                plain
+                native-type="submit"
+                :loading="pageLoading || loading"
+              >
+                Refresh Data
+              </el-button>
+            </div>
+          </AppFormRow>
+        </el-form>
+      </WorkspacePanel>
+
       <OverviewStatsGrid :stats="stats" />
 
       <AppBentoGrid columns="3">
@@ -322,8 +397,9 @@ onMounted(refreshAll)
         />
       </AppBentoGrid>
 
-      <AppBentoGrid columns="2">
+      <div class="enterprise-list-toolbar">
         <OverviewFilterBar
+          class="enterprise-list-toolbar__filter"
           :search-query="filters.search"
           search-placeholder="Search visitor ID, token, IP, or user agent..."
           :filter-fields="filterFields"
@@ -335,59 +411,59 @@ onMounted(refreshAll)
           @reset="resetFilters"
         />
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <header class="mb-4">
-            <h3 class="text-base font-semibold text-slate-950">Traffic Highlights</h3>
-            <p class="mt-1 text-sm text-slate-500">
+        <section class="enterprise-support-card enterprise-list-toolbar__support">
+          <header class="enterprise-support-card__header">
+            <h3 class="enterprise-support-card__title">Traffic Highlights</h3>
+            <p class="enterprise-support-card__description">
               Quick context from referrers and latest tracked activity.
             </p>
           </header>
 
-          <div class="space-y-4">
-            <div>
-              <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+          <div class="enterprise-support-card__sections">
+            <section class="enterprise-support-card__section">
+              <p class="enterprise-support-card__section-title">
                 Top Referrers
               </p>
-              <div v-if="hotspots.topReferrers?.length" class="space-y-2">
+              <div v-if="hotspots.topReferrers?.length" class="enterprise-support-list">
                 <div
                   v-for="item in hotspots.topReferrers.slice(0, 4)"
                   :key="item.referrer"
-                  class="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2"
+                  class="enterprise-support-item"
                 >
-                  <p class="truncate text-sm font-medium text-slate-900">
+                  <p class="enterprise-support-item__title enterprise-support-item__title--truncate">
                     {{ item.referrer || 'Direct / Unknown' }}
                   </p>
-                  <p class="text-xs text-slate-500">
+                  <p class="enterprise-support-item__meta enterprise-support-item__meta--compact">
                     {{ Number(item.visits || 0).toLocaleString() }} visits
                   </p>
                 </div>
               </div>
               <el-empty v-else description="No referrer data." :image-size="64" />
-            </div>
+            </section>
 
-            <div>
-              <p class="mb-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            <section class="enterprise-support-card__section">
+              <p class="enterprise-support-card__section-title">
                 Recent Activity
               </p>
-              <div v-if="hotspots.recentActivity?.length" class="space-y-2">
+              <div v-if="hotspots.recentActivity?.length" class="enterprise-support-list">
                 <div
                   v-for="item in hotspots.recentActivity.slice(0, 4)"
                   :key="`${item.visitorId}-${item.visitedAt}-${item.path}`"
-                  class="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2"
+                  class="enterprise-support-item"
                 >
-                  <p class="text-sm font-medium text-slate-900">
+                  <p class="enterprise-support-item__title">
                     {{ item.path || 'Unknown path' }}
                   </p>
-                  <p class="text-xs text-slate-500">
+                  <p class="enterprise-support-item__meta enterprise-support-item__meta--compact">
                     {{ item.visitorId }} • {{ formatDisplayDate(item.visitedAt) }}
                   </p>
                 </div>
               </div>
               <el-empty v-else description="No recent activity." :image-size="64" />
-            </div>
+            </section>
           </div>
         </section>
-      </AppBentoGrid>
+      </div>
 
       <EntityTable
         title="Visitor Records"

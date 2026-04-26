@@ -1,7 +1,10 @@
 <script setup>
+import AppSurfaceSection from '@/components/common/AppSurfaceSection.vue'
+import PageWrapper from '@/components/common/PageWrapper.vue'
 import AppDetailGrid from '@/components/common/detail/AppDetailGrid.vue'
 import AppDetailItem from '@/components/common/detail/AppDetailItem.vue'
 import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import { useRouteAccess } from '@/composables/useRouteAccess'
 import { resolveResourceViewConfig } from '@/modules/crud/resourceConfigs'
 import { formatDisplayValue, resolveFieldValue } from '@/utils/adminPresentation'
@@ -181,6 +184,24 @@ const contextRows = computed(() => {
   return rows
 })
 
+const headerActions = computed(() => {
+  const actions = []
+
+  if (canCreate.value) {
+    actions.push({ key: 'create', label: `Create ${config.value.singular}` })
+  }
+
+  if (canGoDetails.value) {
+    actions.push({ key: 'details', label: 'View Details' })
+  }
+
+  if (canGoEdit.value) {
+    actions.push({ key: 'edit', label: 'Edit' })
+  }
+
+  return actions
+})
+
 function withRecordParams() {
   if (recordId.value) return { [routeParamKey.value]: recordId.value }
   return {}
@@ -237,46 +258,56 @@ async function goToEdit() {
   await router.push({ name: editRouteName.value, params: withRecordParams() })
 }
 
+async function onHeaderAction(action) {
+  switch (action?.key) {
+    case 'create':
+      await goToCreate()
+      return
+    case 'details':
+      await goToDetails()
+      return
+    case 'edit':
+      await goToEdit()
+      return
+    default:
+  }
+}
+
 watch([routeName, recordId, hasSingletonRecord], loadEntity, { immediate: true })
 </script>
 
 <template>
-  <page-wrapper :title="resolved.title" :description="resolved.description">
-    <div class="space-y-4">
-      <el-card shadow="never" class="border border-slate-200">
-        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div class="space-y-2">
-            <div class="flex flex-wrap items-center gap-2">
-              <el-tag type="info" effect="plain">Action Workspace</el-tag>
-              <el-tag effect="plain">{{ config.label }}</el-tag>
-              <el-tag type="warning">{{ stateLabel }}</el-tag>
-            </div>
-            <p class="text-sm text-slate-600">{{ workflowNote.step }}</p>
+  <PageWrapper>
+    <template #header>
+      <EnterprisePageHeader
+        :title="`${config.label} ${stateLabel}`"
+        :description="workflowNote.step"
+        :actions="headerActions"
+        :loading="loading"
+        :disabled="!headerActions.length"
+        :back-disabled="!canGoList"
+        :back-label="`Back to ${config.label}`"
+        @select="onHeaderAction"
+        @back="goToList"
+      >
+        <template #pretitle>
+          <div class="resource-action-pretitle">
+            <el-tag type="info" effect="plain">Action Workspace</el-tag>
+            <el-tag effect="plain">{{ config.label }}</el-tag>
+            <el-tag type="warning">{{ stateLabel }}</el-tag>
           </div>
+        </template>
+      </EnterprisePageHeader>
+    </template>
 
-          <div class="flex flex-wrap gap-2">
-            <el-button v-if="canGoList" @click="goToList">Back to {{ config.label }}</el-button>
-            <el-button v-if="canCreate" type="primary" plain @click="goToCreate">
-              Create {{ config.singular }}
-            </el-button>
-            <el-button v-if="canGoDetails" type="primary" @click="goToDetails"
-              >View Details</el-button
-            >
-            <el-button v-if="canGoEdit" type="primary" plain @click="goToEdit">Edit</el-button>
-          </div>
-        </div>
-      </el-card>
+    <div class="enterprise-stack enterprise-stack--spacious">
 
       <AppBentoGrid columns="auto">
-        <el-card shadow="never" class="border border-slate-200">
-          <template #header>
-            <div class="flex items-center justify-between gap-2">
-              <span class="text-sm font-semibold text-slate-900">Workflow Guidance</span>
-              <el-tag size="small" type="success" effect="light">Reusable</el-tag>
-            </div>
+        <AppSurfaceSection title="Workflow Guidance" title-tag="h3">
+          <template #actions>
+            <el-tag size="small" type="success" effect="light">Reusable</el-tag>
           </template>
-
-          <div class="space-y-3 text-sm text-slate-700">
+          <div class="resource-action-guidance">
             <p>{{ workflowNote.outcome }}</p>
             <el-alert
               title="Operational note"
@@ -286,13 +317,9 @@ watch([routeName, recordId, hasSingletonRecord], loadEntity, { immediate: true }
               description="Use this route to manage non-CRUD actions while keeping module navigation and context consistent."
             />
           </div>
-        </el-card>
+        </AppSurfaceSection>
 
-        <el-card shadow="never" class="border border-slate-200">
-          <template #header>
-            <span class="text-sm font-semibold text-slate-900">Context</span>
-          </template>
-
+        <AppSurfaceSection title="Context" title-tag="h3">
           <AppDetailGrid :columns="1">
             <AppDetailItem
               v-for="row in contextRows"
@@ -303,20 +330,17 @@ watch([routeName, recordId, hasSingletonRecord], loadEntity, { immediate: true }
               {{ row.value }}
             </AppDetailItem>
           </AppDetailGrid>
-        </el-card>
+        </AppSurfaceSection>
       </AppBentoGrid>
 
-      <el-card
+      <AppSurfaceSection
         v-if="canLoadEntity"
         v-loading="loading"
-        shadow="never"
-        class="border border-slate-200"
+        title="Record Summary"
+        title-tag="h3"
       >
-        <template #header>
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-sm font-semibold text-slate-900">Record Summary</span>
-            <el-button size="small" text @click="loadEntity">Refresh</el-button>
-          </div>
+        <template #actions>
+          <el-button size="small" text @click="loadEntity">Refresh</el-button>
         </template>
 
         <el-alert
@@ -339,8 +363,8 @@ watch([routeName, recordId, hasSingletonRecord], loadEntity, { immediate: true }
           </AppDetailItem>
         </AppDetailGrid>
 
-        <p v-else class="text-sm text-slate-500">No summary is available for this route yet.</p>
-      </el-card>
+        <p v-else class="resource-action-empty-note">No summary is available for this route yet.</p>
+      </AppSurfaceSection>
     </div>
-  </page-wrapper>
+  </PageWrapper>
 </template>

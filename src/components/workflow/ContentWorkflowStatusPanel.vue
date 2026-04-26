@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 
+import AppSurfaceSection from '@/components/common/AppSurfaceSection.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { formatDisplayDate } from '@/utils/adminPresentation'
 import { getWorkflowSchedule } from '@/utils/contentWorkflow'
@@ -70,42 +71,26 @@ const facts = computed(() => [
 </script>
 
 <template>
-  <section
-    class="border p-5 shadow-sm"
-    style="
-      background-color: var(--fcc-surface);
-      border-color: var(--fcc-border);
-      border-radius: var(--fcc-radius-lg);
-      box-shadow: var(--fcc-shadow-base);
-    "
+  <AppSurfaceSection
+    class="content-workflow-status-panel"
+    :title="title"
+    :subtitle="description"
+    title-tag="h2"
   >
-    <header class="mb-4 space-y-1">
-      <h2 class="text-base font-semibold" style="color: var(--fcc-text)">{{ title }}</h2>
-      <p class="text-sm" style="color: var(--fcc-text-muted)">{{ description }}</p>
-    </header>
-
-    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+    <div class="content-workflow-status-panel__grid">
       <article
         v-for="fact in facts"
         :key="fact.key"
-        class="border px-4 py-3"
-        style="
-          background-color: var(--fcc-surface-muted);
-          border-color: var(--fcc-border);
-          border-radius: var(--fcc-radius-md);
-        "
+        class="content-workflow-status-panel__fact"
       >
-        <p
-          class="text-xs font-semibold uppercase tracking-[0.16em]"
-          style="color: var(--fcc-text-muted)"
-        >
+        <p class="content-workflow-status-panel__label">
           {{ fact.label }}
         </p>
-        <div class="mt-2">
+        <div class="content-workflow-status-panel__value">
           <StatusBadge v-if="fact.badge" :value="fact.value" />
-          <p v-else class="text-sm font-medium" style="color: var(--fcc-text)">{{ fact.value }}</p>
+          <p v-else class="content-workflow-status-panel__text">{{ fact.value }}</p>
         </div>
       </article>
     </div>
-  </section>
+  </AppSurfaceSection>
 </template>

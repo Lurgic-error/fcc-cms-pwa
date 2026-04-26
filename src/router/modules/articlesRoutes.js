@@ -35,7 +35,7 @@ export default [
         component: () => import('@/pages/articles/ArticleCreatePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.CREATE]),
-          roles: [ROLES.ADMIN, ROLES.EDITOR],
+          roles: [ROLES.PUBLISHER, ROLES.EDITOR],
           type: 'create',
           breadcrumb: { label: 'Create', i18nKey: 'breadcrumbs.create' },
           page: { title: 'Create Article' },
@@ -67,7 +67,7 @@ export default [
             component: () => import('@/pages/articles/ArticleEditPage.vue'),
             meta: {
               ...requirePermission([PERMISSIONS.UPDATE]),
-              roles: [ROLES.ADMIN, ROLES.EDITOR],
+              roles: [ROLES.PUBLISHER, ROLES.EDITOR],
               type: 'edit',
               breadcrumb: { label: 'Edit', i18nKey: 'breadcrumbs.edit' },
               page: { title: 'Edit Article' },
@@ -81,7 +81,7 @@ export default [
         component: () => import('@/pages/articles/ArticleSchedulePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.PUBLISH]),
-          roles: [ROLES.PUBLISHER, ROLES.ADMIN],
+          roles: [ROLES.PUBLISHER],
           type: 'schedule',
           breadcrumb: { label: 'Schedule', i18nKey: 'breadcrumbs.schedule' },
           page: { title: 'Schedule Article' },

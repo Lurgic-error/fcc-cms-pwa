@@ -3,13 +3,13 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import AppBentoGrid from '@/components/common/layout/AppBentoGrid.vue'
+import EnterprisePageHeader from '@/components/common/EnterprisePageHeader.vue'
 import PageWrapper from '@/components/common/PageWrapper.vue'
 import TablePagination from '@/components/common/TablePagination.vue'
 import OverviewChartCard from '@/components/enterprise/OverviewChartCard.vue'
 import OverviewFilterBar from '@/components/enterprise/OverviewFilterBar.vue'
 import OverviewStatsGrid from '@/components/enterprise/OverviewStatsGrid.vue'
 import EntityTable from '@/components/tables/EntityTable.vue'
-import BulkActionsDropdown from '@/components/workflow/BulkActionsDropdown.vue'
 import { useEditorialActions } from '@/composables/useEditorialActions'
 import { useEntityCrud } from '@/composables/useEntityCrud'
 import { useRouteAccess } from '@/composables/useRouteAccess'
@@ -165,6 +165,36 @@ const trendSeries = computed(() => buildTrendSeries(records.value, props.config)
 const recentActivity = computed(() => buildRecentActivity(records.value, props.config))
 const bulkActions = computed(() => getBulkActions(selectedRecords.value))
 
+const headerActions = computed(() => {
+  const actions = []
+
+  if (selectedRecords.value.length) {
+    actions.push(
+      ...bulkActions.value.map((action) => ({
+        ...action,
+        group: action.group || 'selection',
+      })),
+    )
+  }
+
+  actions.push({
+    key: 'refreshList',
+    label: 'Refresh Records',
+    group: 'workspace',
+  })
+
+  if (canCreate.value) {
+    actions.push({
+      key: 'createRecord',
+      label: `Create ${props.config.singular}`,
+      group: 'workspace',
+      disabled: loading.value,
+    })
+  }
+
+  return actions
+})
+
 function rowActions(row) {
   return getRecordActions(row)
 }
@@ -267,6 +297,35 @@ async function onBulkAction(action) {
   }
 }
 
+async function onHeaderAction(action) {
+  if (!action) return
+
+  if (selectedRecords.value.length && bulkActions.value.some((item) => item.key === action.key)) {
+    await onBulkAction(action)
+    return
+  }
+
+  if (action.key === 'refreshList') {
+    await loadList()
+    return
+  }
+
+  if (action.key === 'createRecord') {
+    await onCreate()
+  }
+}
+
+async function goBack() {
+  if (window.history.length > 1) {
+    await router.back()
+    return
+  }
+
+  if (canAccessRoute('dashboard.overview')) {
+    await router.push({ name: 'dashboard.overview' })
+  }
+}
+
 async function setPage(page) {
   filters.page = page
   await loadList()
@@ -316,35 +375,19 @@ onMounted(loadList)
 <template>
   <PageWrapper>
     <template #header>
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            Admin Overview
-          </p>
-          <h1 class="text-2xl font-semibold text-slate-950">{{ config.label }}</h1>
-          <p class="max-w-3xl text-sm text-slate-600">{{ overviewDescription }}</p>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <span v-if="selectedRecords.length" class="text-sm font-medium text-slate-500">
-            {{ selectedRecords.length }} selected
-          </span>
-          <BulkActionsDropdown
-            v-if="selectedRecords.length"
-            :actions="bulkActions"
-            :selection-count="selectedRecords.length"
-            :loading="loading"
-            @select="onBulkAction"
-          />
-          <el-button plain :loading="loading" @click="loadList">Refresh</el-button>
-          <el-button v-if="canCreate" type="primary" :disabled="loading" @click="onCreate">
-            Create {{ config.singular }}
-          </el-button>
-        </div>
-      </div>
+      <EnterprisePageHeader
+        eyebrow="Admin Overview"
+        :title="config.label"
+        :description="overviewDescription"
+        :actions="headerActions"
+        :loading="loading"
+        :selection-count="selectedRecords.length"
+        @select="onHeaderAction"
+        @back="goBack"
+      />
     </template>
 
-    <div class="space-y-4">
+    <div class="enterprise-stack">
       <OverviewStatsGrid :stats="stats" />
 
       <AppBentoGrid columns="2">
@@ -362,8 +405,9 @@ onMounted(loadList)
         />
       </AppBentoGrid>
 
-      <AppBentoGrid columns="2">
+      <div class="enterprise-list-toolbar">
         <OverviewFilterBar
+          class="enterprise-list-toolbar__filter"
           :search-query="filters.search"
           :search-label="`Search ${config.label}`"
           :search-placeholder="config.searchPlaceholder || 'Search records...'"
@@ -376,26 +420,28 @@ onMounted(loadList)
           @reset="resetFilters"
         />
 
-        <section class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <header class="mb-4">
-            <h3 class="text-base font-semibold text-slate-950">Recent Activity</h3>
-            <p class="mt-1 text-sm text-slate-500">Latest records in the current result set.</p>
+        <section class="enterprise-support-card enterprise-list-toolbar__support">
+          <header class="enterprise-support-card__header">
+            <h3 class="enterprise-support-card__title">Recent Activity</h3>
+            <p class="enterprise-support-card__description">
+              Latest records in the current result set.
+            </p>
           </header>
 
-          <div v-if="recentActivity.length" class="space-y-3">
+          <div v-if="recentActivity.length" class="enterprise-support-list">
             <article
               v-for="item in recentActivity"
               :key="`${item.title}-${item.timestamp || item.status}`"
-              class="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2"
+              class="enterprise-support-item"
             >
-              <div class="flex items-start justify-between gap-3">
+              <div class="enterprise-support-item__row">
                 <div>
-                  <p class="font-medium text-slate-900">{{ item.title }}</p>
-                  <p class="text-sm text-slate-500">{{ item.meta }}</p>
+                  <p class="enterprise-support-item__title">{{ item.title }}</p>
+                  <p class="enterprise-support-item__meta">{{ item.meta }}</p>
                 </div>
                 <el-tag effect="light" size="small">{{ getStatusLabel(item.status) }}</el-tag>
               </div>
-              <p v-if="item.timestamp" class="mt-2 text-xs text-slate-500">
+              <p v-if="item.timestamp" class="enterprise-support-item__timestamp">
                 {{ formatDisplayDate(item.timestamp) }}
               </p>
             </article>
@@ -403,7 +449,7 @@ onMounted(loadList)
 
           <el-empty v-else description="No recent records to summarize." :image-size="72" />
         </section>
-      </AppBentoGrid>
+      </div>
 
       <EntityTable
         title="Records"

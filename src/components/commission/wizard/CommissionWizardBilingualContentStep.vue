@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 
 import AppFormRow from '@/components/forms/AppFormRow.vue'
 
-import CommissionWizardSectionCard from './CommissionWizardSectionCard.vue'
+import AppSurfaceSection from '@/components/common/AppSurfaceSection.vue'
 
 const props = defineProps({
   form: { type: Object, required: true },
@@ -38,13 +38,13 @@ defineExpose({ validate })
 
 <template>
   <el-form ref="formRef" :model="model" label-position="top" scroll-to-error>
-    <CommissionWizardSectionCard :title="label" :description="helper">
+    <AppSurfaceSection class="commission-wizard-section" title-tag="h3" :title="label" :description="helper">
       <AppFormRow :columns="2">
         <el-form-item
           :label="`${label} (English)`"
           :prop="`${fieldKey}.en`"
           :rules="requiredRule(`Enter the English ${label.toLowerCase()}.`)"
-          class="md:col-span-2"
+          class="app-form-row__item--full"
         >
           <el-input
             v-model="model[fieldKey].en"
@@ -58,7 +58,7 @@ defineExpose({ validate })
           :label="`${label} (Swahili)`"
           :prop="`${fieldKey}.sw`"
           :rules="requiredRule(`Enter the Swahili ${label.toLowerCase()}.`)"
-          class="md:col-span-2"
+          class="app-form-row__item--full"
         >
           <el-input
             v-model="model[fieldKey].sw"
@@ -68,6 +68,6 @@ defineExpose({ validate })
           />
         </el-form-item>
       </AppFormRow>
-    </CommissionWizardSectionCard>
+    </AppSurfaceSection>
   </el-form>
 </template>

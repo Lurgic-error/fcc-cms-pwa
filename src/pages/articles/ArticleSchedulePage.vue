@@ -1,8 +1,10 @@
 <script setup>
-import { schedulerAPI } from '@/api'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
+import { schedulerAPI } from '@/api'
+import EntityScheduleWorkspace from '@/components/enterprise/EntityScheduleWorkspace.vue'
+import AppFormRow from '@/components/forms/AppFormRow.vue'
 import { useArticlesStore } from '@/stores/useArticlesStore'
 import { extractErrorMessage } from '@/utils/httpError'
 
@@ -27,6 +29,11 @@ const form = reactive({
   timezone: 'Africa/Dar_es_Salaam',
 })
 
+const headerActions = Object.freeze([
+  { key: 'refreshSchedules', label: 'Refresh schedules', group: 'workspace' },
+  { key: 'viewDetails', label: 'View details', group: 'navigation' },
+])
+
 function resolveText(value) {
   if (typeof value === 'string' && value.trim()) return value
   if (!value || typeof value !== 'object') return ''
@@ -45,35 +52,6 @@ const articleStatus = computed(() => {
   if (article.value?.published === false) return 'unpublished'
   return 'draft'
 })
-
-const statusTagType = computed(() => {
-  const status = String(articleStatus.value || '').toLowerCase()
-  if (status === 'published') return 'success'
-  if (status === 'approved') return 'info'
-  if (status === 'scheduled') return 'warning'
-  if (status === 'unpublished') return 'danger'
-  return ''
-})
-
-function formatDate(value) {
-  if (!value) return '-'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '-'
-  return date.toLocaleString()
-}
-
-function mapScheduleAction(jobName) {
-  return jobName === 'unpublishContent' ? 'Unpublish' : 'Publish'
-}
-
-function getScheduleStatusType(status = '') {
-  const value = String(status || '').toLowerCase()
-  if (value === 'active') return 'success'
-  if (value === 'paused') return 'warning'
-  if (value === 'cancelled') return 'danger'
-  if (value === 'completed') return 'info'
-  return ''
-}
 
 async function loadArticle() {
   if (!articleId.value) return
@@ -145,7 +123,6 @@ async function scheduleAction() {
     }
   } catch (error) {
     errorMessage.value = extractErrorMessage(error, 'Scheduling failed.')
-    submitting.value = false
     return
   } finally {
     submitting.value = false
@@ -154,7 +131,7 @@ async function scheduleAction() {
   await Promise.all([loadArticle(), loadSchedules()])
 }
 
-async function runScheduleAction(scheduleId, action) {
+async function runScheduleAction({ scheduleId, action }) {
   actionLoadingId.value = `${scheduleId}:${action}`
   errorMessage.value = ''
 
@@ -174,12 +151,19 @@ async function runScheduleAction(scheduleId, action) {
   await Promise.all([loadArticle(), loadSchedules()])
 }
 
-async function goBack() {
-  if (window.history.length > 1) {
-    await router.back()
+async function onHeaderAction(action) {
+  if (action?.key === 'refreshSchedules') {
+    await Promise.all([loadArticle(), loadSchedules()])
     return
   }
-  await router.push('/dashboard')
+
+  if (action?.key === 'viewDetails' && articleId.value) {
+    await router.push({ name: 'articles.details', params: { articleId: articleId.value } })
+  }
+}
+
+async function goBack() {
+  await router.push({ name: 'articles.list' })
 }
 
 onMounted(async () => {
@@ -188,143 +172,61 @@ onMounted(async () => {
 </script>
 
 <template>
-  <page-wrapper
+  <EntityScheduleWorkspace
     title="Schedule Article"
     description="Plan publish and unpublish times for this article."
+    :header-actions="headerActions"
+    :loading-header="loadingRecord || loadingSchedules || submitting"
+    back-label="Back to list"
+    :error="errorMessage"
+    :loading-record="loadingRecord"
+    :loading-schedules="loadingSchedules"
+    record-title="Selected article"
+    record-description="Scheduling is configured against this article record."
+    :record-status="articleStatus"
+    :record-status-label="articleStatus"
+    :schedules="schedules"
+    :action-loading-id="actionLoadingId"
+    empty-text="No schedules have been created for this article yet."
+    @select="onHeaderAction"
+    @back="goBack"
+    @refresh-schedules="loadSchedules"
+    @run-schedule-action="runScheduleAction"
   >
-    <div class="space-y-4">
-      <el-alert
-        v-if="errorMessage"
-        type="error"
-        show-icon
-        :closable="false"
-        :title="errorMessage"
-      />
+    <template #record>
+      <p class="workspace-panel__description">{{ articleTitle }}</p>
+    </template>
 
-      <el-card shadow="never" v-loading="loadingRecord">
-        <div class="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h3 class="text-base font-semibold">{{ articleTitle }}</h3>
-            <p class="text-sm text-slate-600">
-              Scheduling is configured against this article record.
-            </p>
-          </div>
-          <div class="flex items-center gap-2">
-            <el-tag :type="statusTagType" effect="light">
-              {{ articleStatus }}
-            </el-tag>
-            <el-button @click="goBack">Back</el-button>
-          </div>
+    <template #form>
+      <el-form label-position="top" class="workspace-form" @submit.prevent="scheduleAction">
+        <AppFormRow :columns="3">
+          <el-form-item label="Action">
+            <el-select v-model="form.action" size="large">
+              <el-option label="Publish" value="publish" />
+              <el-option label="Unpublish" value="unpublish" />
+            </el-select>
+          </el-form-item>
+
+          <el-form-item label="Run At">
+            <el-date-picker
+              v-model="form.runAt"
+              type="datetime"
+              size="large"
+              placeholder="Select date and time"
+            />
+          </el-form-item>
+
+          <el-form-item label="Timezone">
+            <el-input v-model="form.timezone" size="large" />
+          </el-form-item>
+        </AppFormRow>
+
+        <div class="workspace-form__actions">
+          <el-button type="primary" size="large" :loading="submitting" native-type="submit">
+            Save Schedule
+          </el-button>
         </div>
-      </el-card>
-
-      <el-card shadow="never">
-        <template #header>
-          <span class="font-semibold">Create Schedule</span>
-        </template>
-
-        <el-form label-position="top">
-          <AppFormRow :columns="3">
-            <el-form-item label="Action">
-              <el-select v-model="form.action">
-                <el-option label="Publish" value="publish" />
-                <el-option label="Unpublish" value="unpublish" />
-              </el-select>
-            </el-form-item>
-
-            <el-form-item label="Run At">
-              <el-date-picker
-                v-model="form.runAt"
-                type="datetime"
-                placeholder="Select date and time"
-              />
-            </el-form-item>
-
-            <el-form-item label="Timezone">
-              <el-input v-model="form.timezone" />
-            </el-form-item>
-          </AppFormRow>
-
-          <div class="mt-4">
-            <el-button type="primary" :loading="submitting" @click="scheduleAction">
-              Save Schedule
-            </el-button>
-          </div>
-        </el-form>
-      </el-card>
-
-      <el-card shadow="never">
-        <template #header>
-          <div class="flex items-center justify-between gap-2">
-            <span class="font-semibold">Current Schedules</span>
-            <el-button :loading="loadingSchedules" @click="loadSchedules">Refresh</el-button>
-          </div>
-        </template>
-
-        <el-table :data="schedules" stripe size="small" v-loading="loadingSchedules">
-          <el-table-column label="Action" min-width="130">
-            <template #default="{ row }">{{ mapScheduleAction(row.jobName) }}</template>
-          </el-table-column>
-          <el-table-column label="Run At" min-width="180">
-            <template #default="{ row }">{{ formatDate(row.runAt) }}</template>
-          </el-table-column>
-          <el-table-column label="Status" width="130">
-            <template #default="{ row }">
-              <el-tag :type="getScheduleStatusType(row.status)" effect="light">
-                {{ row.status || '-' }}
-              </el-tag>
-            </template>
-          </el-table-column>
-          <el-table-column label="Last Updated" min-width="170">
-            <template #default="{ row }">{{
-              formatDate(row.lastModifiedAt || row.updatedAt)
-            }}</template>
-          </el-table-column>
-          <el-table-column label="Manage" min-width="260" fixed="right">
-            <template #default="{ row }">
-              <div class="flex flex-wrap gap-2">
-                <el-button
-                  size="small"
-                  :loading="actionLoadingId === `${row.scheduleId}:runNow`"
-                  @click="runScheduleAction(row.scheduleId, 'runNow')"
-                >
-                  Run Now
-                </el-button>
-
-                <el-button
-                  v-if="row.status === 'active'"
-                  size="small"
-                  type="warning"
-                  :loading="actionLoadingId === `${row.scheduleId}:pause`"
-                  @click="runScheduleAction(row.scheduleId, 'pause')"
-                >
-                  Pause
-                </el-button>
-
-                <el-button
-                  v-if="row.status === 'paused'"
-                  size="small"
-                  type="success"
-                  :loading="actionLoadingId === `${row.scheduleId}:resume`"
-                  @click="runScheduleAction(row.scheduleId, 'resume')"
-                >
-                  Resume
-                </el-button>
-
-                <el-button
-                  v-if="row.status !== 'cancelled' && row.status !== 'completed'"
-                  size="small"
-                  type="danger"
-                  :loading="actionLoadingId === `${row.scheduleId}:cancel`"
-                  @click="runScheduleAction(row.scheduleId, 'cancel')"
-                >
-                  Cancel
-                </el-button>
-              </div>
-            </template>
-          </el-table-column>
-        </el-table>
-      </el-card>
-    </div>
-  </page-wrapper>
+      </el-form>
+    </template>
+  </EntityScheduleWorkspace>
 </template>

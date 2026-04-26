@@ -54,7 +54,7 @@ export default [
         component: () => import('@/pages/events/EventCreatePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.CREATE]),
-          roles: [ROLES.ADMIN, ROLES.EDITOR],
+          roles: [ROLES.PUBLISHER, ROLES.EDITOR],
 
           type: 'create',
           page: {
@@ -77,7 +77,7 @@ export default [
         component: () => import('@/pages/events/EventReviewQueuePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.REVIEW]),
-          roles: [ROLES.REVIEWER, ROLES.ADMIN],
+          roles: [ROLES.REVIEWER, ROLES.PUBLISHER],
 
           type: 'workflow',
           page: {
@@ -100,7 +100,7 @@ export default [
         component: () => import('@/pages/events/EventArchivePage.vue'),
         meta: {
           ...requirePermission([PERMISSIONS.ARCHIVE]),
-          roles: [ROLES.ADMIN],
+          roles: [ROLES.PUBLISHER],
 
           type: 'archive',
           page: {
@@ -160,7 +160,7 @@ export default [
             component: () => import('@/pages/events/EventEditPage.vue'),
             meta: {
               ...requirePermission([PERMISSIONS.UPDATE]),
-              roles: [ROLES.ADMIN, ROLES.EDITOR],
+              roles: [ROLES.PUBLISHER, ROLES.EDITOR],
 
               type: 'edit',
               page: {
@@ -187,7 +187,7 @@ export default [
             component: () => import('@/pages/events/EventSchedulePage.vue'),
             meta: {
               ...requirePermission([PERMISSIONS.PUBLISH]),
-              roles: [ROLES.PUBLISHER, ROLES.ADMIN],
+              roles: [ROLES.PUBLISHER],
 
               type: 'workflow',
               page: {
@@ -214,7 +214,7 @@ export default [
             component: () => import('@/pages/events/EventHistoryPage.vue'),
             meta: {
               ...requirePermission([PERMISSIONS.UPDATE]),
-              roles: [ROLES.ADMIN, ROLES.EDITOR, ROLES.REVIEWER],
+              roles: [ROLES.PUBLISHER, ROLES.EDITOR, ROLES.REVIEWER],
 
               type: 'history',
               page: {

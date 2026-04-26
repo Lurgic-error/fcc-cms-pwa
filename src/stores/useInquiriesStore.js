@@ -2,7 +2,6 @@ import { inquiriesAPI } from '@/api'
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { createWorkflowEntityStore } from './_shared/createWorkflowEntityStore'
-import { withWorkflowState } from '@/utils/contentWorkflow'
 
 const adapterApi = {
   list: (query) => inquiriesAPI.listInquiries(query),
@@ -35,34 +34,44 @@ export const useInquiriesStore = defineStore('inquiries', () => {
   const stats = ref(null)
 
   async function respondToInquiry(inquiryId, response) {
-    const res = await inquiriesAPI.respondToInquiry({ inquiryId, ...response })
-    if (res?.error) return res
-    base.entity.value = withWorkflowState(res?.inquiry || res)
-    return base.entity.value
+    return base.withAsync(async () => {
+      const res = await inquiriesAPI.respondToInquiry({ inquiryId, ...response })
+      if (res?.error) base.handleError(res)
+      return base.setEntityState(res?.inquiry || res)
+    })
   }
 
   async function classifyInquiry(inquiryId, classification) {
-    const res = await inquiriesAPI.classifyInquiry({ inquiryId, classification })
-    if (res?.error) return res
-    base.entity.value = withWorkflowState(res?.inquiry || res)
-    return base.entity.value
+    return base.withAsync(async () => {
+      const res = await inquiriesAPI.classifyInquiry({ inquiryId, classification })
+      if (res?.error) base.handleError(res)
+      return base.setEntityState(res?.inquiry || res)
+    })
   }
 
   async function categorizeInquiry(inquiryId, category) {
-    const res = await inquiriesAPI.categorizeInquiry({ inquiryId, category })
-    if (res?.error) return res
-    base.entity.value = withWorkflowState(res?.inquiry || res)
-    return base.entity.value
+    return base.withAsync(async () => {
+      const res = await inquiriesAPI.categorizeInquiry({ inquiryId, category })
+      if (res?.error) base.handleError(res)
+      return base.setEntityState(res?.inquiry || res)
+    })
   }
 
   async function fetchStats() {
-    const res = await inquiriesAPI.getInquiryStats()
-    if (!res?.error) stats.value = res?.stats || res
-    return stats.value
+    return base.withAsync(async () => {
+      const res = await inquiriesAPI.getInquiryStats()
+      if (res?.error) base.handleError(res)
+      stats.value = res?.stats || res
+      return stats.value
+    })
   }
 
   async function findUnprocessed(query = {}) {
-    return inquiriesAPI.findUnprocessedInquiries(query)
+    return base.withAsync(async () => {
+      const res = await inquiriesAPI.findUnprocessedInquiries(query)
+      if (res?.error) base.handleError(res)
+      return res
+    })
   }
 
   return {

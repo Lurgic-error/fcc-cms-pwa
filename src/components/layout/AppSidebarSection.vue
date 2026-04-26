@@ -40,24 +40,3 @@ const emit = defineEmits(['navigate', 'navigate-child', 'toggle'])
     />
   </section>
 </template>
-
-<style scoped>
-.sidebar-section {
-  margin-top: 1.8rem;
-}
-
-.sidebar-section:first-child {
-  margin-top: 0;
-}
-
-.sidebar-section__title {
-  margin-bottom: 0.8rem;
-  padding-inline: 0.85rem;
-  color: var(--fcc-sidebar-text);
-  opacity: 0.5;
-  font-size: 0.64rem;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-</style>
