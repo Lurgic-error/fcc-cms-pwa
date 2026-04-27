@@ -35,3 +35,6 @@ coverage
 
 # Vitest
 __screenshots__/
+
+# Backup files (e.g. lockfile snapshots from npm install)
+*.bak
