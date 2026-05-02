@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 function parseError(error) {
   return (
     error?.response?.data?.error ||
@@ -26,27 +27,27 @@ export default function ({ request }) {
   async function listVideos(query = {}) {
     try {
       const { data } = await request.get(url, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function listPublishedVideos(query = {}) {
     try {
       const { data } = await request.get(`${url}/published`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function findVideo({ videoId }) {
     try {
       const { data } = await request.get(`${url}/${videoId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -54,9 +55,9 @@ export default function ({ request }) {
     const body = payload.videoInfo || payload
     try {
       const { data } = await request.post(`${url}/add-video`, body)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -64,54 +65,54 @@ export default function ({ request }) {
     const body = payload.videoInfo || payload
     try {
       const { data } = await request.post(`${url}/${videoId}/change-video`, body)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function deleteVideo({ videoId }) {
     try {
       const { data } = await request.delete(`${url}/${videoId}/delete-video`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function publishVideo({ videoId, ...payload }) {
     try {
       const { data } = await request.put(`${url}/${videoId}/publish-video`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function unpublishVideo({ videoId, ...payload }) {
     try {
       const { data } = await request.put(`${url}/${videoId}/unpublish-video`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function archiveVideo({ videoId, ...payload }) {
     try {
       const { data } = await request.put(`${url}/${videoId}/archive-video`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function unarchiveVideo({ videoId, ...payload }) {
     try {
       const { data } = await request.put(`${url}/${videoId}/unarchive-video`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }

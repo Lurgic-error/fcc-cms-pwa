@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 import { buildEditorialEntityApi, parseEditorialApiError } from './editorialEntityApi'
 
 function parseError(error) {
@@ -23,27 +24,27 @@ export default function ({ request }) {
   async function listServices(query = {}) {
     try {
       const { data } = await request.get(url, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function listPublishedServices(query = {}) {
     try {
       const { data } = await request.get(`${url}/published`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function findService({ serviceId }) {
     try {
       const { data } = await request.get(`${url}/${serviceId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -51,9 +52,9 @@ export default function ({ request }) {
     const body = payload.serviceInfo || payload
     try {
       const { data } = await request.post(`${url}/create`, body)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -61,18 +62,18 @@ export default function ({ request }) {
     const body = payload.serviceInfo || payload
     try {
       const { data } = await request.put(`${url}/${serviceId}/update`, body)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function deleteService({ serviceId }) {
     try {
       const { data } = await request.delete(`${url}/${serviceId}/delete`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }

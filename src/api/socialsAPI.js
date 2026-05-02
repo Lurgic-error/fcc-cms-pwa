@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 function parseError(error) {
   return (
     error?.response?.data?.error ||
@@ -22,27 +23,27 @@ export default function ({ request }) {
   async function listSocials(query = {}) {
     try {
       const { data } = await request.get(url, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function listPublishedSocials(query = {}) {
     try {
       const { data } = await request.get(`${url}/published`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function findSocial({ socialId }) {
     try {
       const { data } = await request.get(`${url}/${socialId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -50,9 +51,9 @@ export default function ({ request }) {
     const body = payload.socialInfo || payload
     try {
       const { data } = await request.post(`${url}/create-social`, body)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -60,18 +61,18 @@ export default function ({ request }) {
     const body = payload.socialInfo || payload
     try {
       const { data } = await request.put(`${url}/${socialId}/update-social`, body)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function deleteSocial({ socialId }) {
     try {
       const { data } = await request.delete(`${url}/${socialId}/delete-social`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }

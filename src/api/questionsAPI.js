@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 import { buildEditorialEntityApi, parseEditorialApiError } from './editorialEntityApi'
 
 function parseError(error) {
@@ -25,27 +26,27 @@ export default function ({ request }) {
   async function listQuestions(query = {}) {
     try {
       const { data } = await request.get(url, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function listPublishedQuestions(query = {}) {
     try {
       const { data } = await request.get(`${url}/published`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function findQuestion({ questionId }) {
     try {
       const { data } = await request.get(`${url}/${questionId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -53,9 +54,9 @@ export default function ({ request }) {
     const body = payload.questionInfo || payload
     try {
       const { data } = await request.post(`${url}/create`, body)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -63,36 +64,36 @@ export default function ({ request }) {
     const body = payload.questionInfo || payload
     try {
       const { data } = await request.put(`${url}/${questionId}/update`, body)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function deleteQuestion({ questionId }) {
     try {
       const { data } = await request.delete(`${url}/${questionId}/delete`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function publishQuestion({ questionId }) {
     try {
       const { data } = await request.put(`${url}/${questionId}/publish`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function unpublishQuestion({ questionId }) {
     try {
       const { data } = await request.put(`${url}/${questionId}/unpublish`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }

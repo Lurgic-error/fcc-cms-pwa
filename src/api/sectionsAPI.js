@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 import {
   buildEditorialEntityApi,
   buildMultipartPayload,
@@ -28,27 +29,27 @@ export default function ({ request }) {
   async function listSections(query = {}) {
     try {
       const { data } = await request.get(url, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function listPublishedSections(query = {}) {
     try {
       const { data } = await request.get(`${url}/published`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function findSection({ sectionId }) {
     try {
       const { data } = await request.get(`${url}/${sectionId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -59,9 +60,9 @@ export default function ({ request }) {
       const { data } = await request.post(`${url}/create`, requestBody, {
         headers: hasBinaryValue(body) ? { 'Content-Type': 'multipart/form-data' } : undefined,
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -72,18 +73,18 @@ export default function ({ request }) {
       const { data } = await request.put(`${url}/${sectionId}/update`, requestBody, {
         headers: hasBinaryValue(body) ? { 'Content-Type': 'multipart/form-data' } : undefined,
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function deleteSection({ sectionId }) {
     try {
       const { data } = await request.delete(`${url}/${sectionId}/delete`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }

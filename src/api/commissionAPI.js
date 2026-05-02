@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 import { appendFormValue, hasBinaryValue, parseEditorialApiError } from './editorialEntityApi'
 
 function parseError(error) {
@@ -101,27 +102,27 @@ export default function ({ request }) {
   async function fetchCommission() {
     try {
       const { data } = await request.get(url)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function fetchCommissionHistory() {
     try {
       const { data } = await request.get(`${url}/history`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function fetchCommissionManagement() {
     try {
       const { data } = await request.get(`${url}/management`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -133,9 +134,9 @@ export default function ({ request }) {
       const { data } = await request.put(url, requestBody, {
         headers: hasBinaryValue(payload) ? { 'Content-Type': 'multipart/form-data' } : undefined,
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -152,126 +153,126 @@ export default function ({ request }) {
   async function submit(commissionId) {
     try {
       const { data } = await request.put(`${url}/${commissionId}/submit`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function approve(commissionId) {
     try {
       const { data } = await request.put(`${url}/${commissionId}/approve`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function reject(commissionId, reason = '') {
     try {
       const { data } = await request.put(`${url}/${commissionId}/reject`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function publish(commissionId) {
     try {
       const { data } = await request.put(`${url}/${commissionId}/publish`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function unpublish(commissionId) {
     try {
       const { data } = await request.put(`${url}/${commissionId}/unpublish`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function schedulePublish(commissionId, payload = {}) {
     try {
       const { data } = await request.put(`${url}/${commissionId}/schedule-publish`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function scheduleUnpublish(commissionId, payload = {}) {
     try {
       const { data } = await request.put(`${url}/${commissionId}/schedule-unpublish`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function cancelPublishSchedule(commissionId) {
     try {
       const { data } = await request.put(`${url}/${commissionId}/cancel-publish-schedule`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function cancelUnpublishSchedule(commissionId) {
     try {
       const { data } = await request.put(`${url}/${commissionId}/cancel-unpublish-schedule`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function archive(commissionId, reason = '') {
     try {
       const { data } = await request.put(`${url}/${commissionId}/archive`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function restoreArchived(commissionId) {
     try {
       const { data } = await request.put(`${url}/${commissionId}/restore-archive`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function softDelete(commissionId, reason = '') {
     try {
       const { data } = await request.put(`${url}/${commissionId}/soft-delete`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function restore(commissionId) {
     try {
       const { data } = await request.put(`${url}/${commissionId}/restore`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function remove(commissionId) {
     try {
       const { data } = await request.delete(`${url}/${commissionId}/delete`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }

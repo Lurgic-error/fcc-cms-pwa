@@ -20,6 +20,7 @@
     "test:e2e:module-flows:full": "sh ./scripts/run-module-flows-e2e.sh",
     "test:e2e:server:full": "npm run test:e2e:auth-role:full && npm run test:e2e:module-flows:full",
     "lint": "eslint . --fix --cache",
+    "lint:check": "eslint .",
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {

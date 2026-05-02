@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 import { createEditorialCollectionApi, parseEditorialApiError } from './editorialEntityApi'
 
 export default function ({ request }) {
@@ -16,9 +17,9 @@ export default function ({ request }) {
   async function unfeatureExpiredArticles() {
     try {
       const { data } = await request.post('/articles/maintenance/unfeature-expired')
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseEditorialApiError(error) }
+      return wrapApiErrorResult(error, parseEditorialApiError)
     }
   }
 

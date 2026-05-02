@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 export default function ({ request }) {
   const url = '/scheduler'
 
@@ -14,63 +15,63 @@ export default function ({ request }) {
   async function listSchedules(query = {}) {
     try {
       const { data } = await request.get(url, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function createSchedule(payload) {
     try {
       const { data } = await request.post(`${url}/create`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function updateSchedule({ scheduleId, ...payload }) {
     try {
       const { data } = await request.put(`${url}/${scheduleId}/update`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function cancelSchedule({ scheduleId, reason }) {
     try {
       const { data } = await request.put(`${url}/${scheduleId}/cancel`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function pauseSchedule({ scheduleId }) {
     try {
       const { data } = await request.put(`${url}/${scheduleId}/pause`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function resumeSchedule({ scheduleId }) {
     try {
       const { data } = await request.put(`${url}/${scheduleId}/resume`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function runNow({ scheduleId }) {
     try {
       const { data } = await request.post(`${url}/${scheduleId}/run-now`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 }

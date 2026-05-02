@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 function parseError(error) {
   return (
     error?.response?.data?.error ||
@@ -20,36 +21,36 @@ export default function ({ request }) {
   async function listVisitors(query = {}) {
     try {
       const { data } = await request.get(`${url}`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function findVisitor(visitorId) {
     try {
       const { data } = await request.get(`${url}/${visitorId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function fetchSummary(query = {}) {
     try {
       const { data } = await request.get(`${url}/summary`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function fetchHotspots(query = {}) {
     try {
       const { data } = await request.get(`${url}/hotspots`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }

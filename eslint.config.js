@@ -35,8 +35,8 @@ export default defineConfig([
 
   // Visual-audit and layout E2E tests legitimately need brief settle
   // delays before screenshots and intentionally chain DOM commands for
-  // readability. The cypress style rules are stylistic guidance, not
-  // correctness — keep as warnings here so CI does not fail on them.
+  // readability. The cypress style rules are explicitly allowlisted here
+  // so lint output stays actionable.
   {
     name: 'cypress/visual-audit-style-overrides',
     files: [
@@ -46,8 +46,8 @@ export default defineConfig([
       'cypress/e2e/visual-audit.cy.js',
     ],
     rules: {
-      'cypress/no-unnecessary-waiting': 'warn',
-      'cypress/unsafe-to-chain-command': 'warn',
+      'cypress/no-unnecessary-waiting': 'off',
+      'cypress/unsafe-to-chain-command': 'off',
     },
   },
 
@@ -70,7 +70,13 @@ export default defineConfig([
 
   {
     ...pluginVitest.configs.recommended,
-    files: ['src/**/__tests__/*'],
+    files: ['src/**/*.test.js', 'src/**/__tests__/**/*.{js,ts,jsx,tsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.vitest,
+      },
+    },
   },
 
   skipFormatting,

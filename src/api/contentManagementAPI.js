@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 import { buildEditorialEntityApi, parseEditorialApiError } from './editorialEntityApi'
 
 function parseError(error) {
@@ -24,53 +25,53 @@ function buildEntityApi({ request, baseUrl }) {
   async function list(query = {}) {
     try {
       const { data } = await request.get(baseUrl, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function find(id) {
     try {
       const { data } = await request.get(`${baseUrl}/${id}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function create(payload = {}) {
     try {
       const { data } = await request.post(`${baseUrl}/create`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function update(id, payload = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/update`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function remove(id) {
     try {
       const { data } = await request.delete(`${baseUrl}/${id}/delete`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
   async function listPublished(query = {}) {
     try {
       const { data } = await request.get(`${baseUrl}/published`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }
@@ -91,9 +92,9 @@ export default function ({ request }) {
         `${root}/content-items/${contentItemId}/versions`,
         payload,
       )
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -104,9 +105,9 @@ export default function ({ request }) {
         regionKey,
         placementIds,
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 

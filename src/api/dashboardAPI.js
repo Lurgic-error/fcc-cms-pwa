@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 function parseError(error) {
   return (
     error?.response?.data?.error ||
@@ -41,16 +42,16 @@ export default function ({ request }) {
         recentPublications,
       }
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function fetchVisitorSummary(query = {}) {
     try {
       const { data } = await request.get('/visitors/summary', { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -64,7 +65,7 @@ export default function ({ request }) {
         pagination: data?.pagination || null,
       }
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }
