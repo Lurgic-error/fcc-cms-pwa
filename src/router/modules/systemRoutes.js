@@ -44,6 +44,57 @@ export default [
         },
       },
       {
+        path: 'audit',
+        name: 'system.audit',
+        component: () => import('@/pages/system/AuditTrailPage.vue'),
+        meta: {
+          type: 'audit',
+          breadcrumb: {
+            label: 'Audit',
+            i18nKey: 'breadcrumbs.audit',
+          },
+        },
+      },
+      {
+        path: 'audit/users/:userId?',
+        name: 'system.auditUsers',
+        component: () => import('@/pages/system/AuditTrailPage.vue'),
+        meta: {
+          type: 'audit',
+          auditPreset: 'users',
+          breadcrumb: {
+            label: 'User Audit',
+            i18nKey: 'breadcrumbs.userAudit',
+          },
+        },
+      },
+      {
+        path: 'audit/resources/:resourceType?/:resourceId?',
+        name: 'system.auditResources',
+        component: () => import('@/pages/system/AuditTrailPage.vue'),
+        meta: {
+          type: 'audit',
+          auditPreset: 'resources',
+          breadcrumb: {
+            label: 'Resource Audit',
+            i18nKey: 'breadcrumbs.resourceAudit',
+          },
+        },
+      },
+      {
+        path: 'audit/actions/:action?',
+        name: 'system.auditActions',
+        component: () => import('@/pages/system/AuditTrailPage.vue'),
+        meta: {
+          type: 'audit',
+          auditPreset: 'actions',
+          breadcrumb: {
+            label: 'Action Audit',
+            i18nKey: 'breadcrumbs.actionAudit',
+          },
+        },
+      },
+      {
         path: 'audit-trail',
         name: 'system.auditTrail',
         component: () => import('@/pages/system/AuditTrailPage.vue'),

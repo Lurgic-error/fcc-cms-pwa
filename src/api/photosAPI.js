@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 import { buildMultipartPayload, hasBinaryValue } from './editorialEntityApi'
 
 function parseError(error) {
@@ -62,18 +63,18 @@ export default function ({ request }) {
   async function listPhotos(query = {}) {
     try {
       const { data } = await request.get(url, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function listPublishedPhotos(query = {}) {
     try {
       const { data } = await request.get(`${url}/published`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -83,9 +84,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.get(`${url}/${photoId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -96,9 +97,9 @@ export default function ({ request }) {
       const { data } = await request.post(`${url}/add-image`, toFormData(body), {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -113,9 +114,9 @@ export default function ({ request }) {
       const { data } = await request.post(`${url}/${photoId}/change-image`, requestBody, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -125,9 +126,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.delete(`${url}/${photoId}/delete-image`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -137,9 +138,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.put(`${url}/${photoId}/publish-image`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -149,9 +150,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.put(`${url}/${photoId}/unpublish-image`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -161,9 +162,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.put(`${url}/${photoId}/archive-image`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -173,9 +174,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.put(`${url}/${photoId}/unarchive-image`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }

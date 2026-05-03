@@ -1,7 +1,7 @@
 <script setup>
-import ResourceActionPage from '@/components/enterprise/ResourceActionPage.vue'
+import AuditTrailPage from './AuditTrailPage.vue'
 </script>
 
 <template>
-  <ResourceActionPage />
+  <AuditTrailPage />
 </template>

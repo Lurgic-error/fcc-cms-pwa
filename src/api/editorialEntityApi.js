@@ -1,10 +1,11 @@
+import {
+  normalizeApiErrorMessage,
+  unwrapApiResponsePayload,
+  wrapApiErrorResult,
+} from './responseEnvelope'
+
 export function parseEditorialApiError(error) {
-  return (
-    error?.response?.data?.error ||
-    error?.response?.data?.message ||
-    error?.message ||
-    'Request failed.'
-  )
+  return normalizeApiErrorMessage(error)
 }
 
 function isPlainObject(value) {
@@ -139,9 +140,9 @@ function createRequestRunner({ request, parseError }) {
   return async function runRequest(method, url, ...args) {
     try {
       const { data } = await request[method](url, ...args.filter((value) => value !== undefined))
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }
@@ -161,7 +162,7 @@ export function createEditorialCollectionApi({
 
   async function list(query = {}) {
     const data = await runRequest('get', baseUrl, { params: query })
-    return data?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
+    return unwrapApiResponsePayload(data)?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
   }
 
   async function find(id) {
@@ -170,19 +171,19 @@ export function createEditorialCollectionApi({
 
   async function listPublished(query = {}) {
     const data = await runRequest('get', `${baseUrl}/published`, { params: query })
-    return data?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
+    return unwrapApiResponsePayload(data)?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
   }
 
   async function listArchived(query = {}) {
     const data = await runRequest('get', `${baseUrl}/archived`, { params: query })
-    return data?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
+    return unwrapApiResponsePayload(data)?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
   }
 
   async function search(query = {}) {
     if (!searchPath) return { error: 'search is not implemented.' }
 
     const data = await runRequest('get', `${baseUrl}/${searchPath}`, { params: query })
-    return data?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
+    return unwrapApiResponsePayload(data)?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
   }
 
   async function create(payload = {}) {
@@ -217,7 +218,7 @@ export function createEditorialCollectionApi({
       name,
       async (query = {}) => {
         const data = await runRequest('get', `${baseUrl}/${path}`, { params: query })
-        return data?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
+        return unwrapApiResponsePayload(data)?.error ? data : normalizeEditorialCollectionPayload(data, collectionKey)
       },
     ]),
   )
@@ -243,225 +244,225 @@ export function buildEditorialEntityApi({ request, baseUrl, parseError = parseEd
   async function listArchived(query = {}) {
     try {
       const { data } = await request.get(`${baseUrl}/archived`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function softDelete(id, reason = '') {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/soft-delete`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function bulkSoftDelete({ ids = [], reason = '' } = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/bulk/soft-delete`, { ids, reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function restore(id) {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/restore`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function bulkRestore({ ids = [] } = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/bulk/restore`, { ids })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function submit(id) {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/submit`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function approve(id) {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/approve`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function reject(id, reason = '') {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/reject`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function publish(id) {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/publish`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function bulkPublish({ ids = [] } = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/bulk/publish`, { ids })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function unpublish(id) {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/unpublish`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function bulkUnpublish({ ids = [] } = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/bulk/unpublish`, { ids })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function schedulePublish(id, payload = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/schedule-publish`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function scheduleUnpublish(id, payload = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/schedule-unpublish`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function bulkSchedulePublish({ items = [] } = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/bulk/schedule-publish`, { items })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function bulkScheduleUnpublish({ items = [] } = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/bulk/schedule-unpublish`, { items })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function cancelPublishSchedule(id) {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/cancel-publish-schedule`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function cancelUnpublishSchedule(id) {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/cancel-unpublish-schedule`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function bulkCancelPublishSchedule({ ids = [] } = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/bulk/cancel-publish-schedule`, { ids })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function bulkCancelUnpublishSchedule({ ids = [] } = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/bulk/cancel-unpublish-schedule`, { ids })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function archive(id, reason = '') {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/archive`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function bulkArchive({ ids = [], reason = '' } = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/bulk/archive`, { ids, reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function restoreArchived(id) {
     try {
       const { data } = await request.put(`${baseUrl}/${id}/restore-archive`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function bulkRestoreArchived({ ids = [] } = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/bulk/restore-archive`, { ids })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function bulkRemove({ ids = [] } = {}) {
     try {
       const { data } = await request.delete(`${baseUrl}/bulk/delete`, { data: { ids } })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 

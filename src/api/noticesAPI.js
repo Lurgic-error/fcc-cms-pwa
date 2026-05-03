@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 export default function ({ request }) {
   const url = '/public-notices'
 
@@ -12,9 +13,9 @@ export default function ({ request }) {
   async function findNotice({ noticeId }) {
     try {
       const { data } = await request.get(`${url}/${noticeId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
@@ -24,9 +25,9 @@ export default function ({ request }) {
         scheduledPublishAt,
         timezone,
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
@@ -36,27 +37,27 @@ export default function ({ request }) {
         scheduledUnpublishAt,
         timezone,
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function cancelNoticePublishSchedule({ noticeId }) {
     try {
       const { data } = await request.put(`${url}/${noticeId}/cancel-publish-schedule`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function cancelNoticeUnpublishSchedule({ noticeId }) {
     try {
       const { data } = await request.put(`${url}/${noticeId}/cancel-unpublish-schedule`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 }

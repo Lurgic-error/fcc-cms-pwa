@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 function parseError(error) {
   return (
     error?.response?.data?.error ||
@@ -22,27 +23,27 @@ export default function ({ request }) {
   async function listCommittees(query = {}) {
     try {
       const { data } = await request.get(url, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function listPublishedCommittees(query = {}) {
     try {
       const { data } = await request.get(`${url}/published`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function findCommittee({ committeeId }) {
     try {
       const { data } = await request.get(`${url}/${committeeId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -50,9 +51,9 @@ export default function ({ request }) {
     const body = payload.committeeInfo || payload
     try {
       const { data } = await request.post(`${url}/register-committee`, body)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -60,18 +61,18 @@ export default function ({ request }) {
     const body = payload.committeeInfo || payload
     try {
       const { data } = await request.put(`${url}/${committeeId}/update-committee`, body)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function deleteCommittee({ committeeId }) {
     try {
       const { data } = await request.delete(`${url}/${committeeId}/delete-committee`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }

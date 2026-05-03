@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 function parseError(error) {
   return (
     error?.response?.data?.error ||
@@ -60,18 +61,18 @@ export default function ({ request }) {
   async function listAssets(query = {}) {
     try {
       const { data } = await request.get(url, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function listPublishedAssets(query = {}) {
     try {
       const { data } = await request.get(`${url}/published`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -81,9 +82,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.get(`${url}/${assetId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -94,9 +95,9 @@ export default function ({ request }) {
       const { data } = await request.post(`${url}/add-image`, toFormData(body), {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -110,9 +111,9 @@ export default function ({ request }) {
       const { data } = await request.post(`${url}/${assetId}/change-image`, body, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -122,9 +123,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.delete(`${url}/${assetId}/delete-image`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -134,9 +135,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.put(`${url}/${assetId}/publish-image`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -146,9 +147,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.put(`${url}/${assetId}/unpublish-image`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -158,9 +159,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.put(`${url}/${assetId}/archive-image`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -170,9 +171,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.put(`${url}/${assetId}/unarchive-image`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }

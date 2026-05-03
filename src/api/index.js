@@ -1,4 +1,5 @@
 import api from './axios'
+import audit from './auditAPI'
 import articles from './blogAPI'
 import assets from './assetsAPI'
 import commission from './commissionAPI'
@@ -27,6 +28,7 @@ import users from './usersAPI'
 import videos from './videosAPI'
 import visitors from './visitorsAPI'
 
+const auditAPI = audit({ request: api })
 const articlesAPI = articles({ request: api })
 const assetsAPI = assets({ request: api })
 const commissionAPI = commission({ request: api })
@@ -57,6 +59,7 @@ const visitorsAPI = visitors({ request: api })
 
 export {
   articlesAPI,
+  auditAPI,
   assetsAPI,
   commissionAPI,
   commissionersAPI,

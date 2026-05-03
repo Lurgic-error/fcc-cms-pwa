@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 /**
  * Inquiries API - Aligned with buildMakeRoutes endpoints
  */
@@ -70,63 +71,63 @@ export default function ({ request }) {
   async function listInquiries(query = {}) {
     try {
       const { data } = await request.get(url, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function findInquiry({ inquiryId }) {
     try {
       const { data } = await request.get(`${url}/${inquiryId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function listPublishedInquiries(query = {}) {
     try {
       const { data } = await request.get(`${url}/published`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function listArchivedInquiries(query = {}) {
     try {
       const { data } = await request.get(`${url}/archived`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function findUnprocessedInquiries(query = {}) {
     try {
       const { data } = await request.get(`${url}/maintenance/unprocessed`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function findDuplicateInquiries(query = {}) {
     try {
       const { data } = await request.get(`${url}/maintenance/duplicates`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function getInquiryStats() {
     try {
       const { data } = await request.get(`${url}/maintenance/stats`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
@@ -135,18 +136,18 @@ export default function ({ request }) {
   async function createInquiry(inquiryInfo) {
     try {
       const { data } = await request.post(`${url}/create`, inquiryInfo)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function createInquiries({ items }) {
     try {
       const { data } = await request.post(`${url}/bulk/create`, { items })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
@@ -155,45 +156,45 @@ export default function ({ request }) {
   async function updateInquiry({ inquiryId, ...inquiryInfo }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/update`, inquiryInfo)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function updateInquiries({ items }) {
     try {
       const { data } = await request.put(`${url}/bulk/update`, { items })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function respondToInquiry({ inquiryId, ...response }) {
     try {
       const { data } = await request.post(`${url}/${inquiryId}/respond`, response)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function classifyInquiry({ inquiryId, classification }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/classify`, { classification })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function categorizeInquiry({ inquiryId, category }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/categorize`, { category })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
@@ -202,36 +203,36 @@ export default function ({ request }) {
   async function deleteInquiry({ inquiryId }) {
     try {
       const { data } = await request.delete(`${url}/${inquiryId}/delete`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function deleteInquiries({ ids }) {
     try {
       const { data } = await request.delete(`${url}/bulk/delete`, { data: { ids } })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function softDeleteInquiry({ inquiryId, reason }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/soft-delete`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function softDeleteInquiries({ ids, reason }) {
     try {
       const { data } = await request.put(`${url}/bulk/soft-delete`, { ids, reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
@@ -240,18 +241,18 @@ export default function ({ request }) {
   async function restoreInquiry({ inquiryId }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/restore`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function restoreInquiries({ ids }) {
     try {
       const { data } = await request.put(`${url}/bulk/restore`, { ids })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
@@ -260,63 +261,63 @@ export default function ({ request }) {
   async function submitInquiryForApproval({ inquiryId }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/submit`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function approveInquiry({ inquiryId }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/approve`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function rejectInquiry({ inquiryId, reason }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/reject`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function publishInquiry({ inquiryId }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/publish`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function unpublishInquiry({ inquiryId }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/unpublish`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function publishInquiries({ ids }) {
     try {
       const { data } = await request.put(`${url}/bulk/publish`, { ids })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function unpublishInquiries({ ids }) {
     try {
       const { data } = await request.put(`${url}/bulk/unpublish`, { ids })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
@@ -327,9 +328,9 @@ export default function ({ request }) {
       const { data } = await request.put(`${url}/${inquiryId}/schedule-publish`, {
         scheduledPublishAt,
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
@@ -338,72 +339,72 @@ export default function ({ request }) {
       const { data } = await request.put(`${url}/${inquiryId}/schedule-unpublish`, {
         scheduledUnpublishAt,
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function cancelInquiryPublishSchedule({ inquiryId }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/cancel-publish-schedule`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function cancelInquiryUnpublishSchedule({ inquiryId }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/cancel-unpublish-schedule`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function scheduleInquiriesPublish({ items }) {
     try {
       const { data } = await request.put(`${url}/bulk/schedule-publish`, { items })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function scheduleInquiriesUnpublish({ items }) {
     try {
       const { data } = await request.put(`${url}/bulk/schedule-unpublish`, { items })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function cancelInquiriesPublishSchedule({ ids }) {
     try {
       const { data } = await request.put(`${url}/bulk/cancel-publish-schedule`, { ids })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function cancelInquiriesUnpublishSchedule({ ids }) {
     try {
       const { data } = await request.put(`${url}/bulk/cancel-unpublish-schedule`, { ids })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function processScheduledInquiries() {
     try {
       const { data } = await request.post(`${url}/process-scheduled`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
@@ -412,36 +413,36 @@ export default function ({ request }) {
   async function archiveInquiry({ inquiryId, reason }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/archive`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function restoreArchivedInquiry({ inquiryId }) {
     try {
       const { data } = await request.put(`${url}/${inquiryId}/restore-archive`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function archiveInquiries({ ids, reason }) {
     try {
       const { data } = await request.put(`${url}/bulk/archive`, { ids, reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
   async function restoreArchivedInquiries({ ids }) {
     try {
       const { data } = await request.put(`${url}/bulk/restore-archive`, { ids })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 
@@ -450,9 +451,9 @@ export default function ({ request }) {
   async function sendUnprocessedAlerts() {
     try {
       const { data } = await request.post(`${url}/maintenance/send-alerts`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error }
+      return wrapApiErrorResult(error)
     }
   }
 }

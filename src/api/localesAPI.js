@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 function parseError(error) {
   return (
     error?.response?.data?.error ||
@@ -36,153 +37,153 @@ export default function ({ request }) {
   async function list(query = {}) {
     try {
       const { data } = await request.get(baseUrl, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function find(localeId) {
     try {
       const { data } = await request.get(`${baseUrl}/${localeId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function create(payload = {}) {
     try {
       const { data } = await request.post(`${baseUrl}/create`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function update(localeId, payload = {}) {
     try {
       const { data } = await request.put(`${baseUrl}/${localeId}/update`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function remove(localeId) {
     try {
       const { data } = await request.delete(`${baseUrl}/${localeId}/delete`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function softDelete(localeId, reason = '') {
     try {
       const { data } = await request.put(`${baseUrl}/${localeId}/soft-delete`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function restore(localeId) {
     try {
       const { data } = await request.put(`${baseUrl}/${localeId}/restore`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function submit(localeId) {
     try {
       const { data } = await request.put(`${baseUrl}/${localeId}/submit`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function approve(localeId) {
     try {
       const { data } = await request.put(`${baseUrl}/${localeId}/approve`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function reject(localeId, reason = '') {
     try {
       const { data } = await request.put(`${baseUrl}/${localeId}/reject`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function publish(localeId) {
     try {
       const { data } = await request.put(`${baseUrl}/${localeId}/publish`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function unpublish(localeId) {
     try {
       const { data } = await request.put(`${baseUrl}/${localeId}/unpublish`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function archive(localeId, reason = '') {
     try {
       const { data } = await request.put(`${baseUrl}/${localeId}/archive`, { reason })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function restoreArchived(localeId) {
     try {
       const { data } = await request.put(`${baseUrl}/${localeId}/restore-archive`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function listPublished(query = {}) {
     try {
       const { data } = await request.get(`${baseUrl}/published`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function listArchived(query = {}) {
     try {
       const { data } = await request.get(`${baseUrl}/archived`, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function listActive() {
     try {
       const { data } = await request.get(`${baseUrl}/active`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -190,27 +191,27 @@ export default function ({ request }) {
     try {
       const localePart = locale ? `/${locale}` : ''
       const { data } = await request.get(`${baseUrl}/fallback-chain${localePart}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function setDefault(localeId) {
     try {
       const { data } = await request.put(`${baseUrl}/${localeId}/set-default`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function setActive(localeId, isActive) {
     try {
       const { data } = await request.put(`${baseUrl}/${localeId}/active`, { isActive })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }

@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 function parseError(error) {
   return (
     error?.response?.data?.error ||
@@ -28,9 +29,9 @@ export default function ({ request }) {
   async function listSubscribers(query = {}) {
     try {
       const { data } = await request.get(url, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: normalizeSubscriberError(error) }
+      return wrapApiErrorResult(error, normalizeSubscriberError)
     }
   }
 
@@ -40,9 +41,9 @@ export default function ({ request }) {
 
     try {
       const { data } = await request.get(`${url}/${subscriberId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: normalizeSubscriberError(error) }
+      return wrapApiErrorResult(error, normalizeSubscriberError)
     }
   }
 }

@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 import {
   createEditorialCollectionApi,
   parseEditorialApiError,
@@ -23,9 +24,9 @@ export default function ({ request }) {
   async function expirePublications() {
     try {
       const { data } = await request.post('/publications/maintenance/expire')
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseEditorialApiError(error) }
+      return wrapApiErrorResult(error, parseEditorialApiError)
     }
   }
 

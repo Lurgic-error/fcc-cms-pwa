@@ -1,3 +1,4 @@
+import { unwrapApiResponsePayload, wrapApiErrorResult } from './responseEnvelope'
 function parseError(error) {
   return (
     error?.response?.data?.error ||
@@ -34,63 +35,63 @@ export default function ({ request }) {
   async function fetchUsers(query = {}) {
     try {
       const { data } = await request.get(baseUrl, { params: query })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function fetchUser({ userId }) {
     try {
       const { data } = await request.get(`${baseUrl}/${userId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function fetchUserProfile({ userId }) {
     try {
       const { data } = await request.get(`${baseUrl}/profile/${userId}`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function createUser(payload = {}) {
     try {
       const { data } = await request.post(`${baseUrl}/create-user`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function updateUser({ userId, ...payload }) {
     try {
       const { data } = await request.put(`${baseUrl}/${userId}/update-user`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function changePassword({ userId, ...payload }) {
     try {
       const { data } = await request.put(`${baseUrl}/${userId}/change-password`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function forgotPassword({ email }) {
     try {
       const { data } = await request.post(`${baseUrl}/forgot-password`, { email })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -102,63 +103,63 @@ export default function ({ request }) {
         password,
         confirmedPassword,
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function validateRecoveryToken({ token }) {
     try {
       const { data } = await request.post(`${baseUrl}/validate-recovery-token`, { token })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function validateVerificationToken({ token }) {
     try {
       const { data } = await request.post(`${baseUrl}/validate-verification-token`, { token })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function validateActivationToken({ token }) {
     try {
       const { data } = await request.post(`${baseUrl}/validate-activation-token`, { token })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function activateUser({ userId }) {
     try {
       const { data } = await request.post(`${baseUrl}/activate-user`, { userId })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function deactivateUser({ userId }) {
     try {
       const { data } = await request.post(`${baseUrl}/deactivate-user`, { userId })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function loginUser({ email, password }) {
     try {
       const { data } = await request.post(`${baseUrl}/login`, { email, password })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
@@ -169,36 +170,36 @@ export default function ({ request }) {
           'x-skip-auth': 'true',
         },
       })
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function logoutUser({ userId }) {
     try {
       const { data } = await request.patch(`${baseUrl}/${userId}/logout`)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function assignRole({ userId, ...payload }) {
     try {
       const { data } = await request.post(`${baseUrl}/${userId}/assign-role`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 
   async function removeRole({ userId, ...payload }) {
     try {
       const { data } = await request.post(`${baseUrl}/${userId}/remove-role`, payload)
-      return data
+      return unwrapApiResponsePayload(data)
     } catch (error) {
-      return { error: parseError(error) }
+      return wrapApiErrorResult(error, parseError)
     }
   }
 }
