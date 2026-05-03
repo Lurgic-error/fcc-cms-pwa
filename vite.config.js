@@ -10,8 +10,24 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 const cmsPort = 4174
 
+// Deploy-time base prefix. Default '/' keeps local dev + legacy deploys
+// untouched. Set VITE_BASE_PATH_PREFIX=/admin/ when serving the PWA
+// behind a reverse proxy that mounts it at a sub-path. The same prefix
+// flows into the vite asset base, vue-router (via createWebHistory's
+// import.meta.env.BASE_URL), the PWA manifest's start_url + scope, and
+// the workbox navigateFallback — keep them aligned.
+function normalizeBasePrefix(raw) {
+  if (!raw) return '/'
+  let v = String(raw).trim()
+  if (!v.startsWith('/')) v = '/' + v
+  if (!v.endsWith('/')) v = v + '/'
+  return v
+}
+const basePathPrefix = normalizeBasePrefix(process.env.VITE_BASE_PATH_PREFIX)
+
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
+  base: basePathPrefix,
   plugins: [
     vue(),
     mode !== 'production' && vueDevTools(),
@@ -37,23 +53,23 @@ export default defineConfig(({ mode }) => ({
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/',
-        scope: '/',
+        start_url: basePathPrefix,
+        scope: basePathPrefix,
         icons: [
           {
-            src: '/pwa-192x192.png',
+            src: `${basePathPrefix}pwa-192x192.png`,
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/pwa-512x512.png',
+            src: `${basePathPrefix}pwa-512x512.png`,
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any',
           },
           {
-            src: '/pwa-maskable-512x512.png',
+            src: `${basePathPrefix}pwa-maskable-512x512.png`,
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
@@ -64,7 +80,7 @@ export default defineConfig(({ mode }) => ({
         // The CMS is an authenticated dashboard; precaching JSON API
         // responses is risky. Cache the app shell only and let API
         // calls fall through to the network.
-        navigateFallback: '/index.html',
+        navigateFallback: `${basePathPrefix}index.html`,
         navigateFallbackDenylist: [/^\/api\//, /^\/content\//],
         runtimeCaching: [
           {

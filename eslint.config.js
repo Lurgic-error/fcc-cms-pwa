@@ -79,5 +79,17 @@ export default defineConfig([
     },
   },
 
+  // Node-context configs (vite.config.js, etc.) need node globals — they
+  // run under Node at build/dev startup, not in the browser.
+  {
+    name: 'app/node-config-files',
+    files: ['vite.config.{js,mjs,ts}', '*.config.{js,mjs,ts}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+
   skipFormatting,
 ])
