@@ -1,5 +1,15 @@
 import { createWebHashHistory, createWebHistory } from 'vue-router'
 
-const useHash = import.meta.env.VITE_ROUTER_MODE === 'hash'
+export function createRouterHistory({
+  baseUrl = '/',
+  routerMode = 'history',
+  createWebHistory: makeWebHistory = createWebHistory,
+  createWebHashHistory: makeHashHistory = createWebHashHistory,
+} = {}) {
+  return routerMode === 'hash' ? makeHashHistory(baseUrl) : makeWebHistory(baseUrl)
+}
 
-export const routerHistory = useHash ? createWebHashHistory() : createWebHistory()
+export const routerHistory = createRouterHistory({
+  baseUrl: import.meta.env.BASE_URL,
+  routerMode: import.meta.env.VITE_ROUTER_MODE,
+})

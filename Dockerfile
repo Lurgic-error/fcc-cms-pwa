@@ -15,7 +15,9 @@ COPY . .
 
 # Vite bakes VITE_* env vars at build time
 ARG VITE_API_URL=http://localhost:4000/api/v1
+ARG VITE_BASE_PATH_PREFIX=/
 ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_BASE_PATH_PREFIX=$VITE_BASE_PATH_PREFIX
 
 RUN npm run build
 
